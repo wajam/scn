@@ -1,0 +1,25 @@
+# Build generated #
+###################
+build
+target
+lib_managed
+
+# IDE generated files #
+######################
+.project
+.classpath
+.idea*
+.history
+*.iml
+*.class
+
+# OS generated files #
+######################
+.DS_Store
+ehthumbs.db
+Icon?
+Thumbs.db
+.*.tmp
+.*.swp
+.swp
+
