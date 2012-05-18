@@ -13,11 +13,21 @@ import com.wajam.nrv.service.{Action, Service}
  */
 class Scn(storage: SequenceStorage, serviceName: String = "scn") extends Service(serviceName) {
   private val sequenceActor = new SequenceActor(storage)
+  sequenceActor.start()
 
-  val nextSequence = this.registerAction(new Action("/sequence/:name/next", msg => {
+  private val nextSequence = this.registerAction(new Action("/sequence/:name/next", msg => {
     val name = msg.parameters("name").toString
-    val by = msg.parameters.getOrElse("increment", "1").toString.toInt
-    val seq = storage.next(name, by)
-    msg.reply(Map("name" -> name, "sequence" -> seq))
+    sequenceActor.next(name, seq => {
+      msg.reply(Map("name" -> name, "sequence" -> seq))
+    })
   }))
+
+  def getNextSequence(name: String, cb: (Int, Option[Exception]) => Unit) {
+    this.nextSequence.call(params = Map("name" -> name), onReply = (respMsg, optException) => {
+      if (optException.isEmpty)
+        cb(respMsg.parameters("sequence").asInstanceOf[Int], None)
+      else
+        cb(0, optException)
+    })
+  }
 }

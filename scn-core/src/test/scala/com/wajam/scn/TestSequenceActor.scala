@@ -11,13 +11,13 @@ class TestSequenceActor extends FunSuite {
   actor.start()
 
   test("should generate unique sequence id") {
-    for (i <- 0 to 999) {
+    for (i <- 0 to 9999) {
       val value = actor.next("test%d".format(i % 10))
     }
 
     for (i <- 0 to 9) {
       val value = actor.next("test%d".format(i))
-      assert(value == 101, value)
+      assert(value == 1011, value)
     }
   }
 }

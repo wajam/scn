@@ -19,12 +19,12 @@ class InMemorySequenceStorage extends SequenceStorage {
   def next(name: String, count: Int): (Int, Int) = {
     val (from, to) = sequenceCount.get(name) match {
       case Some(current) =>
-        (current, count - 1)
+        (current, current + count - 1)
       case None =>
-        (0, count - 1)
+        (1, count)
     }
 
-    sequenceCount += (name -> (count + 1))
+    sequenceCount += (name -> (to + 1))
     (from, to)
   }
 }
