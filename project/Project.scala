@@ -1,7 +1,7 @@
 import sbt._
 import Keys._
 
-object SpnlBuild extends Build {
+object ScnBuild extends Build {
   var commonResolvers = Seq(
     // local snapshot support
     ScalaToolsSnapshots,
