@@ -11,7 +11,8 @@ object ScnBuild extends Build {
     "Scala-Tools" at "http://scala-tools.org/repo-releases/",
     "Sun GF Maven2 Repo" at "http://download.java.net/maven/glassfish",
     "Oracle Maven2 Repo" at "http://download.oracle.com/maven",
-    "Sonatype" at "http://oss.sonatype.org/content/repositories/release"
+    "Sonatype" at "http://oss.sonatype.org/content/repositories/release",
+    "Wajam" at "http://ci1.is.wajam/"
   )
 
   var commonDeps = Seq(
