@@ -6,7 +6,7 @@ import scala.collection.mutable.Map
  * Sequence storage that doesn't storage sequence number, but keep it in memory.
  */
 class InMemorySequenceStorage extends SequenceStorage {
-  private var sequenceCount = Map[String, Int]()
+   val sequenceCount = Map[String, Int]()
 
   /**
    * Get next sequence boundaries for given count.

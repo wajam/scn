@@ -17,13 +17,15 @@ class Scn(storage: SequenceStorage, serviceName: String = "scn") extends Service
 
   private val nextSequence = this.registerAction(new Action("/sequence/:name/next", msg => {
     val name = msg.parameters("name").toString
+    val nb = msg.parameters("nb").asInstanceOf[Option[Int]]
+
     sequenceActor.next(name, seq => {
       msg.reply(Map("name" -> name, "sequence" -> seq))
-    })
+    }, nb)
   }))
 
-  def getNextSequence(name: String, cb: (Int, Option[Exception]) => Unit) {
-    this.nextSequence.call(params = Map("name" -> name), onReply = (respMsg, optException) => {
+  def getNextSequence(name: String, cb: (Int, Option[Exception]) => Unit, nb : Option[Int] = None) {
+    this.nextSequence.call(params = Map("name" -> name, "nb" -> nb), onReply = (respMsg, optException) => {
       if (optException.isEmpty)
         cb(respMsg.parameters("sequence").asInstanceOf[Int], None)
       else
