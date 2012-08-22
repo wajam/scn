@@ -1,16 +1,25 @@
-package com.wajam.scn
+package com.wajam.scn.storage
 
 /**
  * Consistent storage system for sequence number
  */
-trait SequenceStorage {
+trait ScnStorage[T] {
+
+  case class SequenceRange(from: Int, to: Int)
+
+  /**
+   * Get Head of the sequence
+   * @return Head of the sequence (Next element to be returned)
+   */
+  def head: T
+
   /**
    * Get next sequence boundaries for given count.
    * WARNING: Calls to this function must be synchronized or single threaded
    *
-   * @param name Name of the sequence
    * @param count Number of numbers asked
    * @return Inclusive from and to sequence
    */
-  def next(name: String, count: Int): (Int, Int)
+  def next(count: Int): List[T]
+
 }

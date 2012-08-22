@@ -4,14 +4,16 @@ import org.scalatest.junit.JUnitRunner
 import org.junit.runner.RunWith
 import com.wajam.nrv.cluster.zookeeper.ZookeeperClient
 import org.scalatest.FunSuite
+import storage.ZookeeperSequenceStorage
 
 @RunWith(classOf[JUnitRunner])
 class TestZookeeperStorage extends FunSuite {
-  val storage = new ZookeeperSequenceStorage(new ZookeeperClient("127.0.0.1"))
+  val storage = new ZookeeperSequenceStorage(new ZookeeperClient("127.0.0.1"), "it_test")
 
   test("increment") {
-    val (from, to) = storage.next("it_test", 10)
-    assert((to - from) == 9, (from, to))
-    assert(to >= 10, (from, to))
+    val range = storage.next(10)
+    assert(range.last - range.head == 8, range.last - range.head)
+    assert(range.last >= 10, range.last)
+    assert(range.size == 10, range.size)
   }
 }

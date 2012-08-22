@@ -2,32 +2,25 @@ package com.wajam.scn
 
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
-import org.scalatest.{BeforeAndAfterEach, BeforeAndAfter, FunSuite}
+import org.scalatest.{BeforeAndAfterEach, FunSuite}
 import java.util.concurrent.CountDownLatch
-import storage.{ScnStorage, InMemorySequenceStorage}
-import collection.parallel.mutable
+import storage.{InMemoryTimestampStorage, ScnStorage, InMemorySequenceStorage}
 import scala.Some
 import scala.Some
 
 @RunWith(classOf[JUnitRunner])
-class TestSequenceActor extends FunSuite with BeforeAndAfterEach {
-  var storage: ScnStorage[Int] = null
-  var actor: SequenceActor[Int] = null
+class TestTimestampActor extends FunSuite with BeforeAndAfterEach {
+  var storage: ScnStorage[Timestamp] = null
+  var actor: SequenceActor[Timestamp] = null
 
   override def beforeEach() {
-    storage = new InMemorySequenceStorage
-    actor = new SequenceActor[Int](storage)
+    storage = new InMemoryTimestampStorage
+    actor = new SequenceActor[Timestamp](storage)
     actor.start()
   }
 
-  test("unicity of generated ids") {
-    var results = List[Int]()
-
-    for (i <- 0 to 999) {
-      actor.next(values => {
-        results = results ::: values
-      }, Some(1))
-    }
+  test("unicity of generated timestamps") {
+    var results = List[Timestamp]()
 
     val latch = new CountDownLatch(1)
 
@@ -39,16 +32,16 @@ class TestSequenceActor extends FunSuite with BeforeAndAfterEach {
     latch.await()
 
     assert(results === results.distinct)
-    assert(results.size === 1100)
+    assert(results.size === 100)
   }
 
-  test("sequence generation with batching of 10") {
+  test("timestamps generation with batching of 10") {
     for (i <- 0 to 999) {
       actor.next(_ => {}, Some(1))
     }
 
     val latch = new CountDownLatch(1)
-    var results = List[Int]()
+    var results = List[Timestamp]()
 
     actor.next(values => {
       results = values
@@ -57,11 +50,10 @@ class TestSequenceActor extends FunSuite with BeforeAndAfterEach {
 
     latch.await()
 
-    assert(results === List.range(1001, 1001 + 10), results)
     assert(results.size === 10)
   }
 
-  test("sequence generation with batching of 100 (max_batch)") {
+  test("timestamps generation with batching of 100 (max_batch)") {
     val batchSize = 200
 
     for (i <- 0 to 999) {
@@ -69,7 +61,7 @@ class TestSequenceActor extends FunSuite with BeforeAndAfterEach {
     }
 
     val latch = new CountDownLatch(1)
-    var results = List[Int]()
+    var results = List[Timestamp]()
 
     actor.next(values => {
       results = values
@@ -78,7 +70,6 @@ class TestSequenceActor extends FunSuite with BeforeAndAfterEach {
 
     latch.await()
 
-    assert(results === List.range(1001, 1001 + 100), results)
     assert(results.size === 100)
   }
 

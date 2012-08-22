@@ -1,46 +1,41 @@
 package com.wajam.scn
 
 import actors.Actor
-import scala.collection.mutable.Map
+
+import storage.ScnStorage
 
 /**
  * Actor that receives sequence requests and returns sequence numbers
  */
-class SequenceActor(storage: SequenceStorage) extends Actor {
-  private val MIN_BATCH_SIZE = 100
-  private val sequences = Map[String, (Int, Int)]()
+class SequenceActor[T <% Comparable[T]](storage: ScnStorage[T]) extends Actor {
+  private val MAX_BATCH_SIZE = 100
+  private var lastGenerated = storage.head
 
-  object GetSequence
-
-  def next(sequenceName: String, cb: (Int => Unit), nb: Option[Int] = None) {
-    this !(GetSequence, sequenceName, cb, nb)
+  def next(cb: (List[T] => Unit), nb: Option[Int] = None) {
+    this !(cb, nb)
   }
 
   def act() {
     loop {
       react {
-        case (GetSequence, sequenceName: String, cb: (Int => Unit), optNb: Option[Int]) =>
+        case (cb: (List[T] => Unit), optNb: Option[Int]) =>
+          // Define the batch size
           val batchSize = optNb match {
             case Some(nb) =>
-              List(nb, MIN_BATCH_SIZE).min
+              List(nb, MAX_BATCH_SIZE).min
             case None =>
-              MIN_BATCH_SIZE
+              MAX_BATCH_SIZE
           }
 
-          val (sequence, to) = sequences.get(sequenceName) match {
-            case Some((curSeq, curTo)) =>
-              if (curSeq <= curTo) {
-                (curSeq, curTo)
-              } else {
-                storage.next(sequenceName, batchSize)
-              }
-            case None =>
-              storage.next(sequenceName, batchSize)
+          var nextRange = storage.next(batchSize)
+          // Next range first item must ALWAYS be greater than the last generated
+          while (nextRange.head.compareTo(lastGenerated) != 1) {
+           Thread.sleep(50)
+            nextRange = storage.next(batchSize)
           }
 
-          sequences += (sequenceName -> (sequence + 1, to))
-
-          cb(sequence)
+          cb(nextRange)
+          lastGenerated = nextRange.last
       }
     }
   }
