@@ -2,12 +2,9 @@ package com.wajam.scn
 
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
-import org.scalatest.{BeforeAndAfterEach, BeforeAndAfter, FunSuite}
+import org.scalatest.{BeforeAndAfterEach, FunSuite}
 import java.util.concurrent.CountDownLatch
 import storage.{ScnStorage, InMemorySequenceStorage}
-import collection.parallel.mutable
-import scala.Some
-import scala.Some
 
 @RunWith(classOf[JUnitRunner])
 class TestSequenceActor extends FunSuite with BeforeAndAfterEach {

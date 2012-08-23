@@ -1,8 +1,5 @@
 package com.wajam.scn.storage
 
-import scala.collection.mutable.Map
-import scala.Some
-
 /**
  * Sequence storage that doesn't store sequence number, but keep it in memory.
  */

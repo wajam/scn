@@ -5,11 +5,11 @@ import com.wajam.nrv.cluster.zookeeper.ZookeeperClient
 /**
  * Sequence storage that stores
  */
-class ZookeeperSequenceStorage(zkClient: ZookeeperClient, name: String) extends ScnStorage[Int] {
+class ZookeeperSequenceStorage(zkClient: ZookeeperClient, name: String) extends ScnStorage[Long] {
   zkClient.ensureExists("/scn", "".getBytes)
   zkClient.ensureExists("/scn/sequence", "".getBytes)
 
-  def head: Int = zkClient.getInt("/scn/sequence/%s".format(name))
+  def head: Long = zkClient.getLong("/scn/sequence/%s".format(name))
 
   /**
    * Get next sequence boundaries for given count.
@@ -18,11 +18,10 @@ class ZookeeperSequenceStorage(zkClient: ZookeeperClient, name: String) extends 
    * @param count Number of numbers asked
    * @return Inclusive from and to sequence
    */
-  def next(count: Int): List[Int] = {
-    val counter = zkClient.incrementCounter("/scn/sequence/%s".format(name), count, 0).toInt
-    List.range(counter - count + 1, counter)
+  def next(count: Int): List[Long] = {
+    val counter = zkClient.incrementCounter("/scn/sequence/%s".format(name), count, 1)
+    List.range(counter - count, counter)
   }
-
 
 
 }

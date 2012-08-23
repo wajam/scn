@@ -29,6 +29,7 @@ case class Timestamp(private var timevalue: Long, private var seq: Long = 0) ext
   }
 
   def value: Long = timevalue * 10000 + seq
+
   def time: Long = timevalue
 }
 
@@ -36,12 +37,12 @@ object Timestamp {
   val MIN_SEQ_NO = 0
   val MAX_SEQ_NO = 9999
 
+  // *Warning* this should be removed since it might not be unique
   val now = Timestamp(System.currentTimeMillis())
 
   def MAX = Timestamp(Long.MaxValue, MAX_SEQ_NO)
 
   def MIN = Timestamp(0, MIN_SEQ_NO)
 
-  implicit def long2timestamp(value: Long) = Timestamp(value / 10000, value % 10000)
   implicit def timestamp2long(ts: Timestamp) = ts.value
 }

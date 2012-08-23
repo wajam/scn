@@ -1,8 +1,7 @@
 package com.wajam.scn
 
 import com.wajam.nrv.service.{Action, Service}
-import storage.{ScnStorage, InMemoryTimestampStorage, InMemorySequenceStorage}
-import collection.immutable
+import storage.{InMemoryTimestampStorage, InMemorySequenceStorage}
 
 import java.util.concurrent._
 import scala.collection.JavaConversions._
@@ -30,12 +29,12 @@ class Scn(serviceName: String = "scn") extends Service(serviceName) {
     })
 
     timestampActor.next(seq => {
-      msg.reply(immutable.Map("name" -> name, "sequence" -> seq))
+      msg.reply(Map("name" -> name, "sequence" -> seq))
     }, nb)
   }))
 
-  def getNextTimestamp(name: String, cb: (List[Timestamp], Option[Exception]) => Unit, nb : Option[Int] = None) {
-    this.nextTimestamp.call(params = immutable.Map("name" -> name, "nb" -> nb), onReply = (respMsg, optException) => {
+  def getNextTimestamp(name: String, cb: (List[Timestamp], Option[Exception]) => Unit, nb: Option[Int] = None) {
+    this.nextTimestamp.call(params = Map("name" -> name, "nb" -> nb), onReply = (respMsg, optException) => {
       if (optException.isEmpty)
         cb(respMsg.parameters("timestamp").asInstanceOf[List[Timestamp]], None)
       else
@@ -53,12 +52,12 @@ class Scn(serviceName: String = "scn") extends Service(serviceName) {
     })
 
     sequenceActor.next(seq => {
-      msg.reply(immutable.Map("name" -> name, "sequence" -> seq))
+      msg.reply(Map("name" -> name, "sequence" -> seq))
     }, nb)
   }))
 
-  def getNextSequence(name: String, cb: (List[Int], Option[Exception]) => Unit, nb : Option[Int] = None) {
-    this.nextSequence.call(params = immutable.Map("name" -> name, "nb" -> nb), onReply = (respMsg, optException) => {
+  def getNextSequence(name: String, cb: (List[Int], Option[Exception]) => Unit, nb: Option[Int] = None) {
+    this.nextSequence.call(params = Map("name" -> name, "nb" -> nb), onReply = (respMsg, optException) => {
       if (optException.isEmpty)
         cb(respMsg.parameters("sequence").asInstanceOf[List[Int]], None)
       else

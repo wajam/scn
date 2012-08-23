@@ -1,7 +1,6 @@
 package com.wajam.scn.storage
 
 import com.wajam.scn.Timestamp
-import math.Integral
 
 /**
  * Sequence storage that doesn't storage sequence timestamps, but keep it in memory.
@@ -33,6 +32,6 @@ class InMemoryTimestampStorage extends ScnStorage[Timestamp] with CurrentTime {
     }
 
     lastTime = reqTime
-    List.range(Timestamp(reqTime, lastSeq.from).value, Timestamp(reqTime, lastSeq.to).value).map(l => l:Timestamp)
+    List.range(lastSeq.from, lastSeq.to).map(l => Timestamp(lastTime, l))
   }
 }
