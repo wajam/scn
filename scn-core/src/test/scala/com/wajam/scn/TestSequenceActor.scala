@@ -11,17 +11,17 @@ import scala.Some
 
 @RunWith(classOf[JUnitRunner])
 class TestSequenceActor extends FunSuite with BeforeAndAfterEach {
-  var storage: ScnStorage[Int] = null
-  var actor: SequenceActor[Int] = null
+  var storage: ScnStorage[Long] = null
+  var actor: SequenceActor[Long] = null
 
   override def beforeEach() {
     storage = new InMemorySequenceStorage
-    actor = new SequenceActor[Int](storage)
+    actor = new SequenceActor[Long](storage)
     actor.start()
   }
 
   test("unicity of generated ids") {
-    var results = List[Int]()
+    var results = List[Long]()
 
     for (i <- 0 to 999) {
       actor.next(values => {
@@ -48,7 +48,7 @@ class TestSequenceActor extends FunSuite with BeforeAndAfterEach {
     }
 
     val latch = new CountDownLatch(1)
-    var results = List[Int]()
+    var results = List[Long]()
 
     actor.next(values => {
       results = values
@@ -69,7 +69,7 @@ class TestSequenceActor extends FunSuite with BeforeAndAfterEach {
     }
 
     val latch = new CountDownLatch(1)
-    var results = List[Int]()
+    var results = List[Long]()
 
     actor.next(values => {
       results = values

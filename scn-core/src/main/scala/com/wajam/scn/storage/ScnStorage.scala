@@ -5,7 +5,7 @@ package com.wajam.scn.storage
  */
 trait ScnStorage[T] {
 
-  case class SequenceRange(from: Int, to: Int)
+  case class SequenceRange(from: Long, to: Long)
 
   /**
    * Get Head of the sequence
@@ -14,7 +14,7 @@ trait ScnStorage[T] {
   def head: T
 
   /**
-   * Get next sequence boundaries for given count.
+   * Get next sequence for given count.
    * WARNING: Calls to this function must be synchronized or single threaded
    *
    * @param count Number of numbers asked

@@ -4,8 +4,7 @@ import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 import java.util.concurrent.CountDownLatch
-import storage.{InMemoryTimestampStorage, ScnStorage, InMemorySequenceStorage}
-import scala.Some
+import storage.{InMemoryTimestampStorage, ScnStorage}
 import scala.Some
 
 @RunWith(classOf[JUnitRunner])
@@ -18,6 +17,8 @@ class TestTimestampActor extends FunSuite with BeforeAndAfterEach {
     actor = new SequenceActor[Timestamp](storage)
     actor.start()
   }
+
+
 
   test("unicity of generated timestamps") {
     var results = List[Timestamp]()

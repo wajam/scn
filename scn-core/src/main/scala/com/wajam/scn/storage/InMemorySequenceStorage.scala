@@ -6,7 +6,7 @@ import scala.Some
 /**
  * Sequence storage that doesn't store sequence number, but keep it in memory.
  */
-class InMemorySequenceStorage extends ScnStorage[Int] {
+class InMemorySequenceStorage extends ScnStorage[Long] {
 
   private var lastSeq = SequenceRange(0, 0)
 
@@ -14,7 +14,7 @@ class InMemorySequenceStorage extends ScnStorage[Int] {
    * Get Head of the sequence
    * @return Head of the sequence (Next element to be returned)
    */
-  def head: Int = lastSeq.from
+  def head: Long = lastSeq.from
 
   /**
    * Get next sequence boundaries for given count.
@@ -23,7 +23,7 @@ class InMemorySequenceStorage extends ScnStorage[Int] {
    * @param count Number of numbers asked
    * @return Inclusive from and to sequence
    */
-  def next(count: Int): List[Int] = {
+  def next(count: Int): List[Long] = {
     lastSeq = SequenceRange(lastSeq.to, lastSeq.to + count)
     List.range(lastSeq.from, lastSeq.to)
   }

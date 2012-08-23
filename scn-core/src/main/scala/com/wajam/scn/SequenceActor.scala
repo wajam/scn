@@ -20,22 +20,17 @@ class SequenceActor[T <% Comparable[T]](storage: ScnStorage[T]) extends Actor {
       react {
         case (cb: (List[T] => Unit), optNb: Option[Int]) =>
           // Define the batch size
-          val batchSize = optNb match {
-            case Some(nb) =>
-              List(nb, MAX_BATCH_SIZE).min
-            case None =>
-              MAX_BATCH_SIZE
-          }
-
+          val batchSize = optNb.map(math.min(_, MAX_BATCH_SIZE)).getOrElse(MAX_BATCH_SIZE)
           var nextRange = storage.next(batchSize)
+
           // Next range first item must ALWAYS be greater than the last generated
           while (nextRange.head.compareTo(lastGenerated) != 1) {
            Thread.sleep(50)
             nextRange = storage.next(batchSize)
           }
 
-          cb(nextRange)
           lastGenerated = nextRange.last
+          cb(nextRange)
       }
     }
   }

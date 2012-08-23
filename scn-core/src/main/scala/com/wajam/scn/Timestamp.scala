@@ -3,7 +3,9 @@ package com.wajam.scn
 /**
  * Timestamp used to represent mutation time on storage
  */
-class Timestamp(private var timevalue: Long, private var seq: Long) extends Serializable with Comparable[Timestamp] {
+case class Timestamp(private var timevalue: Long, private var seq: Long = 0) extends Comparable[Timestamp] {
+  if (seq > Timestamp.MAX_SEQ_NO)
+    throw new IndexOutOfBoundsException
 
   def this(timevalue: Long) = this(timevalue, 0)
 
@@ -28,23 +30,18 @@ class Timestamp(private var timevalue: Long, private var seq: Long) extends Seri
 
   def value: Long = timevalue * 10000 + seq
   def time: Long = timevalue
-
 }
 
 object Timestamp {
   val MIN_SEQ_NO = 0
   val MAX_SEQ_NO = 9999
 
-  def apply(timevalue: Long) = new Timestamp(timevalue, 0)
-  def apply(timevalue:Long, seq: Long) = new Timestamp(timevalue, seq)
+  val now = Timestamp(System.currentTimeMillis())
 
-  def now = new Timestamp(System.currentTimeMillis(), MIN_SEQ_NO)
+  def MAX = Timestamp(Long.MaxValue, MAX_SEQ_NO)
 
-  val MAX = new Timestamp(Long.MaxValue, MAX_SEQ_NO)
-
-  val MIN = new Timestamp(0, MIN_SEQ_NO)
+  def MIN = Timestamp(0, MIN_SEQ_NO)
 
   implicit def long2timestamp(value: Long) = Timestamp(value / 10000, value % 10000)
-
   implicit def timestamp2long(ts: Timestamp) = ts.value
 }

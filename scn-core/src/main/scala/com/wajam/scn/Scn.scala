@@ -1,9 +1,11 @@
 package com.wajam.scn
 
 import com.wajam.nrv.service.{Action, Service}
-import storage.{InMemoryTimestampStorage, InMemorySequenceStorage, ScnStorage}
-import collection.mutable.Map
+import storage.{ScnStorage, InMemoryTimestampStorage, InMemorySequenceStorage}
 import collection.immutable
+
+import java.util.concurrent._
+import scala.collection.JavaConversions._
 
 
 /**
@@ -15,23 +17,19 @@ import collection.immutable
  * Based on: http://static.googleusercontent.com/external_content/untrusted_dlcp/research.google.com/en//pubs/archive/36726.pdf
  */
 class Scn(serviceName: String = "scn") extends Service(serviceName) {
-  private val sequenceActors = Map[String, SequenceActor[Any]]()
+  private val sequenceActors = new ConcurrentHashMap[String, SequenceActor[Long]]
+  private val timestampActors = new ConcurrentHashMap[String, SequenceActor[Timestamp]]
 
   private val nextTimestamp = this.registerAction(new Action("/timestamp/:name/next", msg => {
     val name = msg.parameters("name").toString
     val nb = msg.parameters("nb").asInstanceOf[Option[Int]]
 
-    val sequenceActor = sequenceActors.get(name) match {
-      case Some(actor) =>
-        actor
-      case None =>
-        // TODO : Check configuration for storage (ZooKeeper or InMemory)
-        val actor = new SequenceActor[Timestamp](new InMemoryTimestampStorage())
-        sequenceActors += (name -> actor.asInstanceOf[SequenceActor[Any]])
-        actor
-    }
+    val timestampActor = timestampActors.getOrElse(name, {
+      val actor = new SequenceActor[Timestamp](new InMemoryTimestampStorage())
+      Option(timestampActors.putIfAbsent(name, actor)).getOrElse(actor)
+    })
 
-    sequenceActor.next(seq => {
+    timestampActor.next(seq => {
       msg.reply(immutable.Map("name" -> name, "sequence" -> seq))
     }, nb)
   }))
@@ -49,15 +47,10 @@ class Scn(serviceName: String = "scn") extends Service(serviceName) {
     val name = msg.parameters("name").toString
     val nb = msg.parameters("nb").asInstanceOf[Option[Int]]
 
-    val sequenceActor = sequenceActors.get(name) match {
-      case Some(actor) =>
-        actor
-      case None =>
-        // TODO : Check configuration for storage (ZooKeeper or InMemory)
-        val actor = new SequenceActor[Int](new InMemorySequenceStorage())
-        sequenceActors += (name -> actor.asInstanceOf[SequenceActor[Any]])
-        actor
-    }
+    val sequenceActor = sequenceActors.getOrElse(name, {
+      val actor = new SequenceActor[Long](new InMemorySequenceStorage())
+      Option(sequenceActors.putIfAbsent(name, actor)).getOrElse(actor)
+    })
 
     sequenceActor.next(seq => {
       msg.reply(immutable.Map("name" -> name, "sequence" -> seq))
@@ -72,4 +65,5 @@ class Scn(serviceName: String = "scn") extends Service(serviceName) {
         cb(Nil, optException)
     })
   }
+
 }
