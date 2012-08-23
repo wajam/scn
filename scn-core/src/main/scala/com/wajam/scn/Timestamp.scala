@@ -3,7 +3,7 @@ package com.wajam.scn
 /**
  * Timestamp used to represent mutation time on storage
  */
-case class Timestamp(private var timevalue: Long, private var seq: Long = 0) extends Comparable[Timestamp] {
+case class Timestamp(var timevalue: Long, var seq: Long = 0) extends Comparable[Timestamp] {
   if (seq > Timestamp.MAX_SEQ_NO)
     throw new IndexOutOfBoundsException
 
@@ -29,8 +29,6 @@ case class Timestamp(private var timevalue: Long, private var seq: Long = 0) ext
   }
 
   def value: Long = timevalue * 10000 + seq
-
-  def time: Long = timevalue
 }
 
 object Timestamp {

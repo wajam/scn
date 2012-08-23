@@ -1,14 +1,13 @@
-package com.wajam.scn
+package com.wajam.scn.storage
 
 import org.scalatest.junit.JUnitRunner
 import org.junit.runner.RunWith
 import com.wajam.nrv.cluster.zookeeper.ZookeeperClient
 import org.scalatest.FunSuite
-import storage.ZookeeperSequenceStorage
 
 @RunWith(classOf[JUnitRunner])
-class TestZookeeperStorage extends FunSuite {
-  val storage = new ZookeeperSequenceStorage(new ZookeeperClient("127.0.0.1"), "it_test")
+class TestZookeeperSequenceStorage extends FunSuite {
+  val storage = new ZookeeperSequenceStorage(new ZookeeperClient("127.0.0.1"), "it_seq_test")
 
   test("increment") {
     val range = storage.next(10)

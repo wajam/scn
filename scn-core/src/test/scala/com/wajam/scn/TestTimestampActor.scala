@@ -18,8 +18,6 @@ class TestTimestampActor extends FunSuite with BeforeAndAfterEach {
     actor.start()
   }
 
-
-
   test("unicity of generated timestamps") {
     var results = List[Timestamp]()
 

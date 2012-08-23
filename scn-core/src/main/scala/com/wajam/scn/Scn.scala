@@ -1,7 +1,7 @@
 package com.wajam.scn
 
 import com.wajam.nrv.service.{Action, Service}
-import storage.{InMemoryTimestampStorage, InMemorySequenceStorage}
+import storage.{InMemorySequenceStorage, InMemoryTimestampStorage}
 
 import java.util.concurrent._
 import scala.collection.JavaConversions._

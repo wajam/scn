@@ -23,5 +23,4 @@ class ZookeeperSequenceStorage(zkClient: ZookeeperClient, name: String) extends 
     List.range(counter - count, counter)
   }
 
-
 }
