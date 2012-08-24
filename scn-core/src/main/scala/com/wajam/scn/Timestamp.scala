@@ -7,8 +7,6 @@ case class Timestamp(var timevalue: Long, var seq: Long = 0) extends Comparable[
   if (seq > Timestamp.MAX_SEQ_NO)
     throw new IndexOutOfBoundsException
 
-  def this(timevalue: Long) = this(timevalue, 0)
-
   override def toString: String = value.toString
 
   override def equals(obj: Any): Boolean = obj match {
@@ -35,11 +33,9 @@ object Timestamp {
   val MIN_SEQ_NO = 0
   val MAX_SEQ_NO = 9999
 
-  // *Warning* this should be removed since it might not be unique
+  // TODO : *Warning* these should be removed since it might not be unique
   val now = Timestamp(System.currentTimeMillis())
-
   def MAX = Timestamp(Long.MaxValue, MAX_SEQ_NO)
-
   def MIN = Timestamp(0, MIN_SEQ_NO)
 
   implicit def timestamp2long(ts: Timestamp) = ts.value
