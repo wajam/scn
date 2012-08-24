@@ -9,7 +9,7 @@ import com.wajam.scn.Timestamp
 class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String) extends ScnStorage[Timestamp] with CurrentTime {
   zkClient.ensureExists("/scn", "".getBytes)
   zkClient.ensureExists("/scn/timestamp", "".getBytes)
-  zkClient.ensureExists("/scn/timestamp/%s".format(name), Timestamp(getCurrentTime).toString.getBytes)
+  zkClient.ensureExists("/scn/timestamp/%s".format(name), ScnTimestamp(getCurrentTime).toString.getBytes)
 
   private var lastTime = getCurrentTime
   private var lastSeq = SequenceRange(0, 1)
@@ -18,7 +18,7 @@ class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String) extends
 
   def head: Timestamp = {
     val ts = zkClient.getString("/scn/timestamp/%s".format(name))
-    Timestamp(ts.substring(0, ts.length() - 4).toLong, ts.substring(ts.length - 4).toLong)
+    ScnTimestamp(ts.substring(0, ts.length() - 4).toLong, ts.substring(ts.length - 4).toLong)
   }
 
   /**
@@ -33,7 +33,7 @@ class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String) extends
 
     // Save ahead X seconds
     if (reqTime >= head) {
-      zkClient.set("/scn/timestamp/%s".format(name), Timestamp(reqTime + SAVE_AHEAD_MS).toString.getBytes)
+      zkClient.set("/scn/timestamp/%s".format(name), ScnTimestamp(reqTime + SAVE_AHEAD_MS).toString.getBytes)
     }
 
     lastSeq = if (lastTime == reqTime) {
@@ -43,7 +43,7 @@ class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String) extends
     }
 
     lastTime = reqTime
-    List.range(lastSeq.from, lastSeq.to).map(l => Timestamp(lastTime, l))
+    List.range(lastSeq.from, lastSeq.to).map(l => ScnTimestamp(lastTime, l))
   }
 
 }

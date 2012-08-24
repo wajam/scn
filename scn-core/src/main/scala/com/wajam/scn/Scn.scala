@@ -15,7 +15,9 @@ import com.wajam.nrv.cluster.zookeeper.ZookeeperClient
  *
  * Based on: http://static.googleusercontent.com/external_content/untrusted_dlcp/research.google.com/en//pubs/archive/36726.pdf
  */
-class Scn(serviceName: String = "scn", storageType: StorageType.Value = StorageType.memory, zookeeperClient: Option[ZookeeperClient] = None) extends Service(serviceName) {
+class Scn(serviceName: String = "scn", storageType: StorageType.Value = StorageType.memory,
+          zookeeperClient: Option[ZookeeperClient] = None) extends Service(serviceName) {
+
   private val sequenceActors = new ConcurrentHashMap[String, SequenceActor[Long]]
   private val timestampActors = new ConcurrentHashMap[String, SequenceActor[Timestamp]]
 
@@ -31,10 +33,8 @@ class Scn(serviceName: String = "scn", storageType: StorageType.Value = StorageT
       val actor = new SequenceActor[Timestamp](storageType match {
         case StorageType.memory =>
           new InMemoryTimestampStorage()
-        case StorageType.zookeeper =>
-          new ZookeeperTimestampStorage(zookeeperClient.getOrElse {
-            throw new IllegalArgumentException("Zookeeper storage type require ZookeeperClient.")
-          }, name)
+        //case StorageType.zookeeper =>
+        //  new ZookeeperTimestampStorage(zookeeperClient.get, name)
       })
       Option(timestampActors.putIfAbsent(name, actor)).getOrElse(actor)
     })
@@ -61,10 +61,8 @@ class Scn(serviceName: String = "scn", storageType: StorageType.Value = StorageT
       val actor = new SequenceActor[Long](storageType match {
         case StorageType.memory =>
           new InMemorySequenceStorage()
-        case StorageType.zookeeper =>
-          new ZookeeperSequenceStorage(zookeeperClient.getOrElse {
-            throw new IllegalArgumentException("Zookeeper storage type require ZookeeperClient.")
-          }, name)
+        //case StorageType.zookeeper =>
+        //  new ZookeeperSequenceStorage(zookeeperClient.get, name)
       })
       Option(sequenceActors.putIfAbsent(name, actor)).getOrElse(actor)
     })

@@ -23,6 +23,7 @@ class SequenceActor[T <% Comparable[T]](storage: ScnStorage[T]) extends Actor {
           val batchSize = math.min(nb, MAX_BATCH_SIZE)
           var nextRange = storage.next(batchSize)
 
+          // TODO : Move that logic into the storages
           // Next range first item must ALWAYS be greater than the last generated
           while (nextRange.head.compareTo(lastGenerated) != 1) {
             Thread.sleep(50)

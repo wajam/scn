@@ -14,7 +14,7 @@ class InMemoryTimestampStorage extends ScnStorage[Timestamp] with CurrentTime {
    * Get Head of the sequence
    * @return Head of the sequence (Next element to be returned)
    */
-  def head = Timestamp(getCurrentTime, lastSeq.from)
+  def head = ScnTimestamp(getCurrentTime, lastSeq.from)
 
   /**
    * Get next sequence for given count.
@@ -23,7 +23,7 @@ class InMemoryTimestampStorage extends ScnStorage[Timestamp] with CurrentTime {
    * @param count Number of numbers asked
    * @return Inclusive from and to sequence
    */
-  def next(count: Int): List[Timestamp] = {
+  def next(count: Int): List[ScnTimestamp] = {
     val reqTime = getCurrentTime
     lastSeq = if (lastTime == reqTime) {
       SequenceRange(lastSeq.to, lastSeq.to + count)
@@ -32,6 +32,6 @@ class InMemoryTimestampStorage extends ScnStorage[Timestamp] with CurrentTime {
     }
 
     lastTime = reqTime
-    List.range(lastSeq.from, lastSeq.to).map(l => Timestamp(lastTime, l))
+    List.range(lastSeq.from, lastSeq.to).map(l => ScnTimestamp(lastTime, l))
   }
 }
