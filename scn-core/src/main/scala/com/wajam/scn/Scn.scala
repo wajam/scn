@@ -33,8 +33,8 @@ class Scn(serviceName: String = "scn", storageType: StorageType.Value = StorageT
       val actor = new SequenceActor[Timestamp](storageType match {
         case StorageType.memory =>
           new InMemoryTimestampStorage()
-        //case StorageType.zookeeper =>
-        //  new ZookeeperTimestampStorage(zookeeperClient.get, name)
+        case StorageType.zookeeper =>
+          new ZookeeperTimestampStorage(zookeeperClient.get, name)
       })
       Option(timestampActors.putIfAbsent(name, actor)).getOrElse(actor)
     })
@@ -61,8 +61,8 @@ class Scn(serviceName: String = "scn", storageType: StorageType.Value = StorageT
       val actor = new SequenceActor[Long](storageType match {
         case StorageType.memory =>
           new InMemorySequenceStorage()
-        //case StorageType.zookeeper =>
-        //  new ZookeeperSequenceStorage(zookeeperClient.get, name)
+        case StorageType.zookeeper =>
+          new ZookeeperSequenceStorage(zookeeperClient.get, name)
       })
       Option(sequenceActors.putIfAbsent(name, actor)).getOrElse(actor)
     })
