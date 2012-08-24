@@ -1,11 +1,11 @@
 package com.wajam.scn
 
 import com.wajam.nrv.service.{Action, Service}
-import storage.{InMemorySequenceStorage, InMemoryTimestampStorage}
+import storage._
 
 import java.util.concurrent._
 import scala.collection.JavaConversions._
-
+import com.wajam.nrv.cluster.zookeeper.ZookeeperClient
 
 /**
  * SCN service that generates atomically increasing sequence number or uniquely increasing timestamp.
@@ -15,16 +15,27 @@ import scala.collection.JavaConversions._
  *
  * Based on: http://static.googleusercontent.com/external_content/untrusted_dlcp/research.google.com/en//pubs/archive/36726.pdf
  */
-class Scn(serviceName: String = "scn") extends Service(serviceName) {
+class Scn(serviceName: String = "scn", storageType: StorageType.Value = StorageType.memory, zookeeperClient: Option[ZookeeperClient] = None) extends Service(serviceName) {
   private val sequenceActors = new ConcurrentHashMap[String, SequenceActor[Long]]
   private val timestampActors = new ConcurrentHashMap[String, SequenceActor[Timestamp]]
 
+  // Construction argument validation
+  if (storageType.eq(StorageType.zookeeper) && zookeeperClient == None)
+    throw new IllegalArgumentException("Zookeeper storage type require ZookeeperClient argument.")
+
   private val nextTimestamp = this.registerAction(new Action("/timestamp/:name/next", msg => {
     val name = msg.parameters("name").toString
-    val nb = msg.parameters("nb").asInstanceOf[Option[Int]]
+    val nb = msg.parameters("nb").asInstanceOf[Int]
 
     val timestampActor = timestampActors.getOrElse(name, {
-      val actor = new SequenceActor[Timestamp](new InMemoryTimestampStorage())
+      val actor = new SequenceActor[Timestamp](storageType match {
+        case StorageType.memory =>
+          new InMemoryTimestampStorage()
+        case StorageType.zookeeper =>
+          new ZookeeperTimestampStorage(zookeeperClient.getOrElse {
+            throw new IllegalArgumentException("Zookeeper storage type require ZookeeperClient.")
+          }, name)
+      })
       Option(timestampActors.putIfAbsent(name, actor)).getOrElse(actor)
     })
 
@@ -44,10 +55,17 @@ class Scn(serviceName: String = "scn") extends Service(serviceName) {
 
   private val nextSequence = this.registerAction(new Action("/sequence/:name/next", msg => {
     val name = msg.parameters("name").toString
-    val nb = msg.parameters("nb").asInstanceOf[Option[Int]]
+    val nb = msg.parameters("nb").asInstanceOf[Int]
 
     val sequenceActor = sequenceActors.getOrElse(name, {
-      val actor = new SequenceActor[Long](new InMemorySequenceStorage())
+      val actor = new SequenceActor[Long](storageType match {
+        case StorageType.memory =>
+          new InMemorySequenceStorage()
+        case StorageType.zookeeper =>
+          new ZookeeperSequenceStorage(zookeeperClient.getOrElse {
+            throw new IllegalArgumentException("Zookeeper storage type require ZookeeperClient.")
+          }, name)
+      })
       Option(sequenceActors.putIfAbsent(name, actor)).getOrElse(actor)
     })
 
@@ -66,3 +84,5 @@ class Scn(serviceName: String = "scn") extends Service(serviceName) {
   }
 
 }
+
+

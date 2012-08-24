@@ -2,7 +2,6 @@ package com.wajam.scn.storage
 
 import com.wajam.nrv.cluster.zookeeper.ZookeeperClient
 import com.wajam.scn.Timestamp
-import org.apache.zookeeper.CreateMode
 
 /**
  *
@@ -32,7 +31,7 @@ class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String) extends
   def next(count: Int): List[Timestamp] = {
     val reqTime = getCurrentTime
 
-    // Save ahead 6 second
+    // Save ahead X seconds
     if (reqTime >= head) {
       zkClient.set("/scn/timestamp/%s".format(name), Timestamp(reqTime + SAVE_AHEAD_MS).toString.getBytes)
     }

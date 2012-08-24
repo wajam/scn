@@ -23,7 +23,7 @@ class TestSequenceActor extends FunSuite with BeforeAndAfterEach {
     for (i <- 0 to 999) {
       actor.next(values => {
         results = results ::: values
-      }, Some(1))
+      }, 1)
     }
 
     val latch = new CountDownLatch(1)
@@ -31,7 +31,7 @@ class TestSequenceActor extends FunSuite with BeforeAndAfterEach {
     actor.next(values => {
       results = results ::: values
       latch.countDown()
-    }, Some(100))
+    }, 100)
 
     latch.await()
 
@@ -41,7 +41,7 @@ class TestSequenceActor extends FunSuite with BeforeAndAfterEach {
 
   test("sequence generation with batching of 10") {
     for (i <- 0 to 999) {
-      actor.next(_ => {}, Some(1))
+      actor.next(_ => {}, 1)
     }
 
     val latch = new CountDownLatch(1)
@@ -50,7 +50,7 @@ class TestSequenceActor extends FunSuite with BeforeAndAfterEach {
     actor.next(values => {
       results = values
       latch.countDown()
-    }, Some(10))
+    }, 10)
 
     latch.await()
 
@@ -62,7 +62,7 @@ class TestSequenceActor extends FunSuite with BeforeAndAfterEach {
     val batchSize = 200
 
     for (i <- 0 to 999) {
-      actor.next(_ => {}, Some(1))
+      actor.next(_ => {}, 1)
     }
 
     val latch = new CountDownLatch(1)
@@ -71,7 +71,7 @@ class TestSequenceActor extends FunSuite with BeforeAndAfterEach {
     actor.next(values => {
       results = values
       latch.countDown()
-    }, Some(200))
+    }, 200)
 
     latch.await()
 

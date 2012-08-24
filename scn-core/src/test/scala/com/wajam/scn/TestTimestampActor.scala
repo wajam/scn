@@ -5,7 +5,6 @@ import org.scalatest.junit.JUnitRunner
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 import java.util.concurrent.CountDownLatch
 import storage.{InMemoryTimestampStorage, ScnStorage}
-import scala.Some
 
 @RunWith(classOf[JUnitRunner])
 class TestTimestampActor extends FunSuite with BeforeAndAfterEach {
@@ -26,7 +25,7 @@ class TestTimestampActor extends FunSuite with BeforeAndAfterEach {
     actor.next(values => {
       results = results ::: values
       latch.countDown()
-    }, Some(100))
+    }, 100)
 
     latch.await()
 
@@ -36,7 +35,7 @@ class TestTimestampActor extends FunSuite with BeforeAndAfterEach {
 
   test("timestamps generation with batching of 10") {
     for (i <- 0 to 999) {
-      actor.next(_ => {}, Some(1))
+      actor.next(_ => {}, 1)
     }
 
     val latch = new CountDownLatch(1)
@@ -45,7 +44,7 @@ class TestTimestampActor extends FunSuite with BeforeAndAfterEach {
     actor.next(values => {
       results = values
       latch.countDown()
-    }, Some(10))
+    }, 10)
 
     latch.await()
 
@@ -56,7 +55,7 @@ class TestTimestampActor extends FunSuite with BeforeAndAfterEach {
     val batchSize = 200
 
     for (i <- 0 to 999) {
-      actor.next(_ => {}, Some(1))
+      actor.next(_ => {}, 1)
     }
 
     val latch = new CountDownLatch(1)
@@ -65,7 +64,7 @@ class TestTimestampActor extends FunSuite with BeforeAndAfterEach {
     actor.next(values => {
       results = values
       latch.countDown()
-    }, Some(200))
+    }, 200)
 
     latch.await()
 
