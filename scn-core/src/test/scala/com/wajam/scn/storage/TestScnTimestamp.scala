@@ -9,7 +9,7 @@ class TestScnTimestamp extends FunSuite {
 
   test("sequence out of bound on new") {
     try {
-      val t = new ScnTimestamp(System.currentTimeMillis(), 99999)
+      val t = ScnTimestamp(System.currentTimeMillis(), 99999)
       fail()
     } catch {
       case ob: IndexOutOfBoundsException => // Success

@@ -15,8 +15,11 @@ import com.wajam.nrv.cluster.zookeeper.ZookeeperClient
  *
  * Based on: http://static.googleusercontent.com/external_content/untrusted_dlcp/research.google.com/en//pubs/archive/36726.pdf
  */
-class Scn(serviceName: String = "scn", storageType: StorageType.Value = StorageType.memory,
+class Scn(serviceName: String = "scn", storageType: StorageType.Value = StorageType.zookeeper,
           zookeeperClient: Option[ZookeeperClient] = None) extends Service(serviceName) {
+
+  def this(storageType: StorageType.Value) = this("scn", storageType, None)
+  def this(storageType: StorageType.Value, zookeeperClient: Option[ZookeeperClient]) = this("scn", storageType, zookeeperClient)
 
   private val sequenceActors = new ConcurrentHashMap[String, SequenceActor[Long]]
   private val timestampActors = new ConcurrentHashMap[String, SequenceActor[Timestamp]]
@@ -31,10 +34,10 @@ class Scn(serviceName: String = "scn", storageType: StorageType.Value = StorageT
 
     val timestampActor = timestampActors.getOrElse(name, {
       val actor = new SequenceActor[Timestamp](storageType match {
-        case StorageType.memory =>
-          new InMemoryTimestampStorage()
         case StorageType.zookeeper =>
           new ZookeeperTimestampStorage(zookeeperClient.get, name)
+        case StorageType.memory =>
+          new InMemoryTimestampStorage()
       })
       Option(timestampActors.putIfAbsent(name, actor)).getOrElse(actor)
     })
@@ -59,10 +62,10 @@ class Scn(serviceName: String = "scn", storageType: StorageType.Value = StorageT
 
     val sequenceActor = sequenceActors.getOrElse(name, {
       val actor = new SequenceActor[Long](storageType match {
-        case StorageType.memory =>
-          new InMemorySequenceStorage()
         case StorageType.zookeeper =>
           new ZookeeperSequenceStorage(zookeeperClient.get, name)
+        case StorageType.memory =>
+          new InMemorySequenceStorage()
       })
       Option(sequenceActors.putIfAbsent(name, actor)).getOrElse(actor)
     })

@@ -8,14 +8,14 @@ import storage.StorageType
  */
 class TestSCN extends FunSuite {
 
-  test("zookeeper storage construction (without client failure)") {
-    try {
-      val scn = new Scn("scn", StorageType.zookeeper)
-      fail()
-    } catch {
-      case iae: IllegalArgumentException => // Success
-      case _ => fail()
-    }
-  }
+//  test("zookeeper storage construction (without client failure)") {
+//    try {
+//      val scn = new Scn("scn", StorageType.zookeeper)
+//      fail()
+//    } catch {
+//      case iae: IllegalArgumentException => // Success
+//      case _ => fail()
+//    }
+//  }
 
 }

@@ -18,7 +18,7 @@ class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String) extends
 
   def head: Timestamp = {
     val ts = zkClient.getString("/scn/timestamp/%s".format(name))
-    ScnTimestamp(ts.substring(0, ts.length() - 4).toLong, ts.substring(ts.length - 4).toLong)
+    ScnTimestamp(ts.toLong)
   }
 
   /**

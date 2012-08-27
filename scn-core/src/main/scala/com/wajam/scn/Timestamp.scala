@@ -1,5 +1,7 @@
 package com.wajam.scn
 
+import storage.ScnTimestamp
+
 trait Timestamp extends Comparable[Timestamp] {
   def value: Long
 
@@ -9,5 +11,9 @@ trait Timestamp extends Comparable[Timestamp] {
 }
 
 object Timestamp {
+  def apply(l: Long) = {
+    ScnTimestamp(l)
+  }
+
   implicit def timestamp2long(ts: Timestamp) = ts.value
 }
