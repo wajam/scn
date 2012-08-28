@@ -1,6 +1,6 @@
 package com.wajam.scn
 
-import com.wajam.nrv.service.{Action, Service}
+import com.wajam.nrv.service.{Resolver, Action, Service}
 import storage._
 
 import java.util.concurrent._
@@ -15,11 +15,11 @@ import com.wajam.nrv.cluster.zookeeper.ZookeeperClient
  *
  * Based on: http://static.googleusercontent.com/external_content/untrusted_dlcp/research.google.com/en//pubs/archive/36726.pdf
  */
-class Scn(serviceName: String = "scn", storageType: StorageType.Value = StorageType.zookeeper,
-          zookeeperClient: Option[ZookeeperClient] = None) extends Service(serviceName) {
+class Scn(serviceName: String = "scn",
+          storageType: StorageType.Value = StorageType.zookeeper,
+          zookeeperClient: Option[ZookeeperClient] = None)
 
-  def this(storageType: StorageType.Value) = this("scn", storageType, None)
-  def this(storageType: StorageType.Value, zookeeperClient: Option[ZookeeperClient]) = this("scn", storageType, zookeeperClient)
+  extends Service(serviceName, None, Some(new Resolver(tokenExtractor = Resolver.TOKEN_HASH_PARAM("name")))) {
 
   private val sequenceActors = new ConcurrentHashMap[String, SequenceActor[Long]]
   private val timestampActors = new ConcurrentHashMap[String, SequenceActor[Timestamp]]
@@ -43,11 +43,11 @@ class Scn(serviceName: String = "scn", storageType: StorageType.Value = StorageT
     })
 
     timestampActor.next(seq => {
-      msg.reply(Map("name" -> name, "sequence" -> seq))
+      msg.reply(Map("name" -> name, "timestamp" -> seq))
     }, nb)
   }))
 
-  def getNextTimestamp(name: String, cb: (List[Timestamp], Option[Exception]) => Unit, nb: Option[Int] = None) {
+  def getNextTimestamp(name: String, cb: (List[Timestamp], Option[Exception]) => Unit, nb: Int = 1) {
     this.nextTimestamp.call(params = Map("name" -> name, "nb" -> nb), onReply = (respMsg, optException) => {
       if (optException.isEmpty)
         cb(respMsg.parameters("timestamp").asInstanceOf[List[Timestamp]], None)
@@ -70,12 +70,12 @@ class Scn(serviceName: String = "scn", storageType: StorageType.Value = StorageT
       Option(sequenceActors.putIfAbsent(name, actor)).getOrElse(actor)
     })
 
-    sequenceActor.next(seq => {
-      msg.reply(Map("name" -> name, "sequence" -> seq))
+    sequenceActor.next(ts => {
+      msg.reply(Map("name" -> name, "timestamps" -> ts))
     }, nb)
   }))
 
-  def getNextSequence(name: String, cb: (List[Int], Option[Exception]) => Unit, nb: Option[Int] = None) {
+  def getNextSequence(name: String, cb: (List[Int], Option[Exception]) => Unit, nb: Int = 1) {
     this.nextSequence.call(params = Map("name" -> name, "nb" -> nb), onReply = (respMsg, optException) => {
       if (optException.isEmpty)
         cb(respMsg.parameters("sequence").asInstanceOf[List[Int]], None)

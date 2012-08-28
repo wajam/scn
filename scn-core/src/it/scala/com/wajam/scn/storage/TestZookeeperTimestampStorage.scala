@@ -4,7 +4,6 @@ import org.scalatest.junit.JUnitRunner
 import org.junit.runner.RunWith
 import com.wajam.nrv.cluster.zookeeper.ZookeeperClient
 import org.scalatest.FunSuite
-import com.wajam.scn.Timestamp
 
 @RunWith(classOf[JUnitRunner])
 class TestZookeeperTimestampStorage extends FunSuite {
@@ -36,8 +35,7 @@ class TestZookeeperTimestampStorage extends FunSuite {
     storage.next(1)
 
     // Head saved in Zookeeper must be smaller than now + save_ahead time since the request is done
-    assert(storage.head.compareTo(ScnTimestamp(System.currentTimeMillis() + storage.SAVE_AHEAD_MS)) == -1,
-      storage.head.compareTo(ScnTimestamp(System.currentTimeMillis() + storage.SAVE_AHEAD_MS)))
+    assert(head.compareTo(ScnTimestamp(System.currentTimeMillis() + storage.SAVE_AHEAD_MS, 0)) == -1)
   }
 
 
