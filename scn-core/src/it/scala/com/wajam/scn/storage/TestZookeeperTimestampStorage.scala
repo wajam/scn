@@ -3,11 +3,13 @@ package com.wajam.scn.storage
 import org.scalatest.junit.JUnitRunner
 import org.junit.runner.RunWith
 import com.wajam.nrv.cluster.zookeeper.ZookeeperClient
-import org.scalatest.FunSuite
+import org.scalatest.{BeforeAndAfter, FunSuite}
 
 @RunWith(classOf[JUnitRunner])
-class TestZookeeperTimestampStorage extends FunSuite {
-  val storage = new ZookeeperTimestampStorage(new ZookeeperClient("127.0.0.1"), "it_ts_test")
+class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
+  val TS_NAME = "it_ts_tests"
+  val zkClient = new ZookeeperClient("127.0.0.1")
+  val storage = new ZookeeperTimestampStorage(zkClient, TS_NAME)
 
   test("increment") {
     val range = storage.next(10)
@@ -35,7 +37,19 @@ class TestZookeeperTimestampStorage extends FunSuite {
     storage.next(1)
 
     // Head saved in Zookeeper must be smaller than now + save_ahead time since the request is done
-    assert(head.compareTo(ScnTimestamp(System.currentTimeMillis() + storage.SAVE_AHEAD_MS, 0)) == -1)
+    assert(head < ScnTimestamp(System.currentTimeMillis() + storage.SAVE_AHEAD_MS, 0), head)
+  }
+
+  test("storage with drifting clock") {
+    val inTimeStorage = new ZookeeperTimestampStorage(zkClient, TS_NAME + 1)
+    val onTime = inTimeStorage.next(1)
+
+    val driftedStorage = new ZookeeperTimestampStorage(zkClient, TS_NAME + 1) with CurrentTime {
+      override def getCurrentTime = System.currentTimeMillis() - (10 * 1000) // 1 minute late clock
+    }
+    val drifted = driftedStorage.next(1)
+
+    assert(drifted.head > onTime.last, ("drifted" -> drifted.head, "last_on_time" -> onTime.last))
   }
 
 

@@ -5,7 +5,7 @@ package com.wajam.scn.storage
  */
 class InMemorySequenceStorage extends ScnStorage[Long] {
 
-  private var lastSeq = SequenceRange(0, 0)
+  private var lastSeq = SequenceRange(0, 1)
 
   /**
    * Get Head of the sequence

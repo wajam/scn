@@ -24,11 +24,17 @@ class InMemoryTimestampStorage extends ScnStorage[Timestamp] with CurrentTime {
    * @return Inclusive from and to sequence
    */
   def next(count: Int): List[ScnTimestamp] = {
-    val reqTime = getCurrentTime
-    lastSeq = if (lastTime == reqTime) {
-      SequenceRange(lastSeq.to, lastSeq.to + count)
-    } else {
-      SequenceRange(1, count + 1)
+    var reqTime = getCurrentTime
+
+    while (lastSeq.range != count) {
+      lastSeq = if (lastTime == reqTime) {
+        SequenceRange(lastSeq.to, lastSeq.to + count)
+      } else if (lastTime < reqTime) {
+        SequenceRange(1, count + 1)
+      } else {
+        reqTime = getCurrentTime
+        SequenceRange(0, 0)
+      }
     }
 
     lastTime = reqTime

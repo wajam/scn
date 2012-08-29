@@ -43,11 +43,11 @@ class Scn(serviceName: String = "scn",
     })
 
     timestampActor.next(seq => {
-      msg.reply(Map("name" -> name, "timestamp" -> seq))
+      msg.reply(Map("name" -> name, "sequence" -> seq))
     }, nb)
   }))
 
-  def getNextTimestamp(name: String, cb: (List[Timestamp], Option[Exception]) => Unit, nb: Int = 1) {
+  def getNextTimestamp(name: String, cb: (List[Timestamp], Option[Exception]) => Unit, nb: Int) {
     this.nextTimestamp.call(params = Map("name" -> name, "nb" -> nb), onReply = (respMsg, optException) => {
       if (optException.isEmpty)
         cb(respMsg.parameters("timestamp").asInstanceOf[List[Timestamp]], None)
@@ -75,7 +75,7 @@ class Scn(serviceName: String = "scn",
     }, nb)
   }))
 
-  def getNextSequence(name: String, cb: (List[Int], Option[Exception]) => Unit, nb: Int = 1) {
+  def getNextSequence(name: String, cb: (List[Int], Option[Exception]) => Unit, nb: Int) {
     this.nextSequence.call(params = Map("name" -> name, "nb" -> nb), onReply = (respMsg, optException) => {
       if (optException.isEmpty)
         cb(respMsg.parameters("sequence").asInstanceOf[List[Int]], None)

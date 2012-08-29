@@ -5,7 +5,9 @@ package com.wajam.scn.storage
  */
 trait ScnStorage[T] {
 
-  case class SequenceRange(from: Long, to: Long)
+  case class SequenceRange(from: Long, to: Long) {
+    val range = to - from
+  }
 
   /**
    * Get Head of the sequence
