@@ -8,6 +8,7 @@ import com.wajam.nrv.cluster.zookeeper.ZookeeperClient
 class ZookeeperSequenceStorage(zkClient: ZookeeperClient, name: String) extends ScnStorage[Long] {
   zkClient.ensureExists("/scn", "".getBytes)
   zkClient.ensureExists("/scn/sequence", "".getBytes)
+  zkClient.ensureExists("/scn/sequence/%s".format(name), "0".getBytes)
 
   def head: Long = zkClient.getLong("/scn/sequence/%s".format(name))
 
