@@ -36,7 +36,7 @@ class Scn(serviceName: String = "scn",
   if (storageType.eq(StorageType.zookeeper) && zookeeperClient == None)
     throw new IllegalArgumentException("Zookeeper storage type require ZookeeperClient argument.")
 
-  private[scn] val nextTimestamp = this.registerAction(new Action("/timestamp/:name/next/:nb", msg => {
+  private[scn] val nextTimestamp = this.registerAction(new Action("/timestamp/:name/next", msg => {
     val name = msg.parameters("name").toString
     val nb = msg.parameters("nb").toString.toInt
 
@@ -47,11 +47,13 @@ class Scn(serviceName: String = "scn",
         case StorageType.memory =>
           new InMemoryTimestampStorage()
       })
+      actor.start()
       Option(timestampActors.putIfAbsent(name, actor)).getOrElse(actor)
     })
 
     timestampActor.next(seq => {
-      msg.reply(Map("name" -> name, "sequence" -> seq))
+      val hdr = Map("name" -> name, "sequence" -> seq)
+      msg.reply(hdr, hdr)
     }, nb)
   }))
 
@@ -64,7 +66,7 @@ class Scn(serviceName: String = "scn",
     })
   }
 
-  private[scn] val nextSequence = this.registerAction(new Action("/sequence/:name/next/:nb", msg => {
+  private[scn] val nextSequence = this.registerAction(new Action("/sequence/:name/next", msg => {
     val name = msg.parameters("name").toString
     val nb = msg.parameters("nb").toString.toInt
 
@@ -75,11 +77,13 @@ class Scn(serviceName: String = "scn",
         case StorageType.memory =>
           new InMemorySequenceStorage()
       })
+      actor.start()
       Option(sequenceActors.putIfAbsent(name, actor)).getOrElse(actor)
     })
 
     sequenceActor.next(seq => {
-      msg.reply(Map("name" -> name, "sequence" -> seq))
+      val hdr = Map("name" -> name, "sequence" -> seq)
+      msg.reply(hdr, hdr)
     }, nb)
   }))
 

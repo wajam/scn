@@ -16,7 +16,7 @@ object ScnHTTPStandalone {
 
   def main(args: Array[String]) {
     val manager = new StaticClusterManager
-    val cluster = new Cluster(new Node("127.0.0.1", Map("nrv" -> 49999, "scn" -> 50000)), manager)
+    val cluster = new Cluster(new Node("0.0.0.0", Map("nrv" -> 49999, "scn" -> 50000)), manager)
 
     val protocol = new HttpProtocol("scn", cluster.localNode, cluster)
     cluster.registerProtocol(protocol)
