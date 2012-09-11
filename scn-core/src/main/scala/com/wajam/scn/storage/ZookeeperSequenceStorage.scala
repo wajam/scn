@@ -3,7 +3,7 @@ package com.wajam.scn.storage
 import com.wajam.nrv.cluster.zookeeper.ZookeeperClient
 
 /**
- * Sequence storage that stores
+ * Sequence storage that stores sequences in Zookeeper
  */
 class ZookeeperSequenceStorage(zkClient: ZookeeperClient, name: String) extends ScnStorage[Long] {
   zkClient.ensureExists("/scn", "".getBytes)

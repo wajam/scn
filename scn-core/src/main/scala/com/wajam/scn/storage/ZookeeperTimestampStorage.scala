@@ -32,11 +32,8 @@ class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String) extends
     var reqTime = getCurrentTime
 
     // Avoid duplicate ID with drifting *late* clock
-    while (lastTime == -1 && reqTime < savedAhead) {
-      val waitTime = savedAhead - reqTime
-      debug("Sleeping %s seconds (drifting late clock)".format(waitTime))
-      Thread.sleep(waitTime)
-      reqTime = getCurrentTime
+    if (lastTime == -1 && reqTime < savedAhead) {
+      throw new Exception("Drifting late clock detected.")
     }
 
     if (ScnTimestamp(reqTime, 0) >= head) {
@@ -47,6 +44,9 @@ class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String) extends
 
     while (lastSeq.range != count) {
       lastSeq = if (lastTime == reqTime) {
+        if (lastSeq.to > ScnTimestamp.MAX_SEQ_NO) {
+          throw new Exception("Maximum sequence number exceeded for timestamp in this millisecond.")
+        }
         SequenceRange(lastSeq.to, lastSeq.to + count)
       } else if (lastTime < reqTime) {
         SequenceRange(1, count + 1)
