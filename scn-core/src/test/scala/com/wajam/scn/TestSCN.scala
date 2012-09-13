@@ -8,7 +8,7 @@ import storage.StorageType
  */
 class TestSCN extends FunSuite {
 
-  test("zookeeper storage construction (without client failure)") {
+  test("zookeeper storage construction (with client failure)") {
     intercept[IllegalArgumentException] {
       val scn = new Scn("scn", StorageType.zookeeper)
     }

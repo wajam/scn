@@ -7,7 +7,6 @@ import java.util.concurrent._
 import scala.collection.JavaConversions._
 import com.wajam.nrv.cluster.zookeeper.ZookeeperClient
 import com.wajam.nrv.protocol.Protocol
-import com.wajam.nrv.data.InMessage
 import com.wajam.nrv.Logging
 
 /**
@@ -87,10 +86,10 @@ class Scn(serviceName: String = "scn",
     }, nb)
   }))
 
-  def getNextSequence(name: String, cb: (List[Int], Option[Exception]) => Unit, nb: Int) {
+  def getNextSequence(name: String, cb: (List[Long], Option[Exception]) => Unit, nb: Int) {
     this.nextSequence.call(params = Map("name" -> name, "nb" -> nb), onReply = (respMsg, optException) => {
       if (optException.isEmpty)
-        cb(respMsg.parameters("sequence").asInstanceOf[List[Int]], None)
+        cb(respMsg.parameters("sequence").asInstanceOf[List[Long]], None)
       else
         cb(Nil, optException)
     })

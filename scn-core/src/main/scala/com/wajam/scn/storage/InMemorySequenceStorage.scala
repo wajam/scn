@@ -1,5 +1,7 @@
 package com.wajam.scn.storage
 
+import com.wajam.scn.SequenceRange
+
 /**
  * Sequence storage that doesn't store sequence number, but keep it in memory.
  */

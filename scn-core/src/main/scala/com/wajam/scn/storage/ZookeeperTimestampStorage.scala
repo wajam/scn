@@ -1,7 +1,7 @@
 package com.wajam.scn.storage
 
 import com.wajam.nrv.cluster.zookeeper.ZookeeperClient
-import com.wajam.scn.Timestamp
+import com.wajam.scn.{SequenceRange, Timestamp}
 import com.wajam.nrv.Logging
 
 /**

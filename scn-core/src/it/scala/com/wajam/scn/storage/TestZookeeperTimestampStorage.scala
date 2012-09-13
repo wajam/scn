@@ -47,10 +47,10 @@ class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
     val driftedStorage = new ZookeeperTimestampStorage(zkClient, TS_NAME + 1) with CurrentTime {
       override def getCurrentTime = System.currentTimeMillis() - (10 * 1000) // 1 minute late clock
     }
-    val drifted = driftedStorage.next(1)
 
-    assert(drifted.head > onTime.last, ("drifted" -> drifted.head, "last_on_time" -> onTime.last))
+    intercept[Exception] {
+      driftedStorage.next(1)
+    }
   }
-
 
 }

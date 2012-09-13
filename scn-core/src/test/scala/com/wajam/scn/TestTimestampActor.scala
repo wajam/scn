@@ -51,24 +51,4 @@ class TestTimestampActor extends FunSuite with BeforeAndAfterEach {
     assert(results.size === 10)
   }
 
-  test("timestamps generation with batching of 100 (max_batch)") {
-    val batchSize = 200
-
-    for (i <- 0 to 999) {
-      actor.next(_ => {}, 1)
-    }
-
-    val latch = new CountDownLatch(1)
-    var results = List[Timestamp]()
-
-    actor.next(values => {
-      results = values
-      latch.countDown()
-    }, 200)
-
-    latch.await()
-
-    assert(results.size === 100)
-  }
-
 }

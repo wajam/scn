@@ -58,9 +58,7 @@ class TestSequenceActor extends FunSuite with BeforeAndAfterEach {
     assert(results.size === 10)
   }
 
-  test("sequence generation with batching of 100 (max_batch)") {
-    val batchSize = 200
-
+  test("sequence generation with batching of 101") {
     for (i <- 0 to 999) {
       actor.next(_ => {}, 1)
     }
@@ -71,12 +69,11 @@ class TestSequenceActor extends FunSuite with BeforeAndAfterEach {
     actor.next(values => {
       results = values
       latch.countDown()
-    }, 200)
+    }, 101)
 
     latch.await()
 
-    assert(results === List.range(1001, 1001 + 100), results)
-    assert(results.size === 100)
+    assert(results === List.range(1001, 1001 + 101), results)
+    assert(results.size === 101)
   }
-
 }
