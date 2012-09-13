@@ -52,14 +52,14 @@ class Scn(serviceName: String = "scn",
 
     timestampActor.next(seq => {
       val hdr = Map("name" -> name, "sequence" -> seq)
-      msg.reply(hdr, hdr)
+      msg.reply(hdr)
     }, nb)
   }))
 
   def getNextTimestamp(name: String, cb: (List[Timestamp], Option[Exception]) => Unit, nb: Int) {
     this.nextTimestamp.call(params = Map("name" -> name, "nb" -> nb), onReply = (respMsg, optException) => {
       if (optException.isEmpty)
-        cb(respMsg.parameters("timestamp").asInstanceOf[List[Timestamp]], None)
+        cb(respMsg.parameters("sequence").asInstanceOf[List[Timestamp]], None)
       else
         cb(Nil, optException)
     })
@@ -82,7 +82,7 @@ class Scn(serviceName: String = "scn",
 
     sequenceActor.next(seq => {
       val hdr = Map("name" -> name, "sequence" -> seq)
-      msg.reply(hdr, hdr)
+      msg.reply(hdr)
     }, nb)
   }))
 

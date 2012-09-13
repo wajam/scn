@@ -17,12 +17,15 @@ case class CountedScnCallStack(private val cbStack: mutable.Stack[ScnCallback], 
   }
 
   def pop(): ScnCallback = {
-    val seq = cbStack.pop()
-    count -= seq.nb
-    seq
+    val cb = cbStack.pop()
+    cb
   }
 
-  val top: ScnCallback = cbStack.top
+  /**
+   * Get the top of the stack
+   * @return Callback on top or null
+   */
+  def top: ScnCallback = cbStack.headOption.getOrElse(null)
 }
 
 case class ScnCallback(callback: (Any, Option[Exception]) => Unit, nb: Int)
