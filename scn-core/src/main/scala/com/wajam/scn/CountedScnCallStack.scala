@@ -28,7 +28,7 @@ case class CountedScnCallStack(private val cbStack: mutable.Stack[ScnCallback], 
   def top: ScnCallback = cbStack.headOption.getOrElse(null)
 }
 
-case class ScnCallback(callback: (Any, Option[Exception]) => Unit, nb: Int)
+case class ScnCallback(callback: (List[_], Option[Exception]) => Unit, nb: Int)
 
 object ScnCallbackType extends Enumeration {
   type SequenceType = Value

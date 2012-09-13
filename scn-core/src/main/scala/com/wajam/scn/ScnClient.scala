@@ -18,11 +18,11 @@ class ScnClient(scn: Scn) {
   private val callStackActor = new ScnCallStackActor(scn)
   callStackActor.start()
 
-  def getNextTimestamp(name: String, cb: (Any, Option[Exception]) => Unit, nb: Int) {
+  def getNextTimestamp(name: String, cb: (List[_], Option[Exception]) => Unit, nb: Int) {
     callStackActor ! Next(name, ScnCallback(cb, nb), ScnCallbackType.timestamp)
   }
 
-  def getNextSequence(name: String, cb: (Any, Option[Exception]) => Unit, nb: Int) {
+  def getNextSequence(name: String, cb: (List[_], Option[Exception]) => Unit, nb: Int) {
     callStackActor ! Next(name, ScnCallback(cb, nb), ScnCallbackType.sequence)
   }
 

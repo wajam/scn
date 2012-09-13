@@ -56,7 +56,7 @@ class Scn(serviceName: String = "scn",
     }, nb)
   }))
 
-  def getNextTimestamp(name: String, cb: (List[Timestamp], Option[Exception]) => Unit, nb: Int) {
+  private[scn] def getNextTimestamp(name: String, cb: (List[Timestamp], Option[Exception]) => Unit, nb: Int) {
     this.nextTimestamp.call(params = Map("name" -> name, "nb" -> nb), onReply = (respMsg, optException) => {
       if (optException.isEmpty)
         cb(respMsg.parameters("sequence").asInstanceOf[List[Timestamp]], None)
@@ -86,7 +86,7 @@ class Scn(serviceName: String = "scn",
     }, nb)
   }))
 
-  def getNextSequence(name: String, cb: (List[Long], Option[Exception]) => Unit, nb: Int) {
+  private[scn] def getNextSequence(name: String, cb: (List[Long], Option[Exception]) => Unit, nb: Int) {
     this.nextSequence.call(params = Map("name" -> name, "nb" -> nb), onReply = (respMsg, optException) => {
       if (optException.isEmpty)
         cb(respMsg.parameters("sequence").asInstanceOf[List[Long]], None)
