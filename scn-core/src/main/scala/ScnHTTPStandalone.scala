@@ -21,7 +21,7 @@ object ScnHTTPStandalone {
     val protocol = new HttpProtocol("scn", cluster.localNode, cluster)
     cluster.registerProtocol(protocol)
 
-    val scn = new Scn("scn", Some(protocol), StorageType.zookeeper, Some(new ZookeeperClient("127.0.0.1")))
+    val scn = new Scn("scn", Some(protocol), StorageType.ZOOKEEPER, Some(new ZookeeperClient("127.0.0.1")))
     cluster.registerService(scn)
     scn.addMember(0, cluster.localNode)
 

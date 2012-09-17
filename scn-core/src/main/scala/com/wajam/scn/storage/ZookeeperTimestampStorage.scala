@@ -29,7 +29,7 @@ class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String) extends
    * @return Inclusive from and to sequence
    */
   def next(count: Int): List[Timestamp] = {
-    var reqTime = getCurrentTime
+    var reqTime = currentTime
 
     // Avoid duplicate ID with drifting *late* clock
     if (lastTime == -1 && reqTime < savedAhead) {
@@ -42,7 +42,7 @@ class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String) extends
       zkClient.set("/scn/timestamp/%s".format(name), savedAhead.toString.getBytes)
     }
 
-    while (lastSeq.range != count) {
+    while (lastSeq.length != count) {
       lastSeq = if (lastTime == reqTime) {
         if (lastSeq.to > ScnTimestamp.MAX_SEQ_NO) {
           throw new Exception("Maximum sequence number exceeded for timestamp in this millisecond.")
@@ -52,7 +52,7 @@ class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String) extends
         SequenceRange(1, count + 1)
       } else {
         // Clock is late for some reason
-        reqTime = getCurrentTime
+        reqTime = currentTime
         SequenceRange(0, 0)
       }
     }

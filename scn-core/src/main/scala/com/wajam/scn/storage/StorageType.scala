@@ -5,5 +5,5 @@ package com.wajam.scn.storage
  */
 object StorageType extends Enumeration {
   type StorageType = Value
-  val memory, zookeeper = Value
+  val MEMORY, ZOOKEEPER = Value
 }

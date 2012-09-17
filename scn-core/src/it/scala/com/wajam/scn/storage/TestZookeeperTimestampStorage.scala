@@ -45,7 +45,7 @@ class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
     val onTime = inTimeStorage.next(1)
 
     val driftedStorage = new ZookeeperTimestampStorage(zkClient, TS_NAME + 1) with CurrentTime {
-      override def getCurrentTime = System.currentTimeMillis() - (10 * 1000) // 1 minute late clock
+      override def currentTime = System.currentTimeMillis() - (10 * 1000) // 1 minute late clock
     }
 
     intercept[Exception] {

@@ -7,14 +7,14 @@ import com.wajam.scn.{SequenceRange, Timestamp}
  */
 class InMemoryTimestampStorage extends ScnStorage[Timestamp] with CurrentTime {
 
-  private var lastTime = getCurrentTime
+  private var lastTime = currentTime
   private var lastSeq = SequenceRange(0, 1)
 
   /**
    * Get Head of the sequence
-   * @return Head of the sequence (Next element to be returned)
+   * @return Head of the sequence (Batched element to be returned)
    */
-  def head = ScnTimestamp(getCurrentTime, lastSeq.from)
+  def head = ScnTimestamp(currentTime, lastSeq.from)
 
   /**
    * Get next sequence for given count.
@@ -24,15 +24,15 @@ class InMemoryTimestampStorage extends ScnStorage[Timestamp] with CurrentTime {
    * @return Inclusive from and to sequence
    */
   def next(count: Int): List[ScnTimestamp] = {
-    var reqTime = getCurrentTime
+    var reqTime = currentTime
 
-    while (lastSeq.range != count) {
+    while (lastSeq.length != count) {
       lastSeq = if (lastTime == reqTime) {
         SequenceRange(lastSeq.to, lastSeq.to + count)
       } else if (lastTime < reqTime) {
         SequenceRange(1, count + 1)
       } else {
-        reqTime = getCurrentTime
+        reqTime = currentTime
         SequenceRange(0, 0)
       }
     }

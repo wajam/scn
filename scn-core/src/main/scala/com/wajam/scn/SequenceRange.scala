@@ -8,5 +8,5 @@ package com.wajam.scn
  *
  */
 private[scn] case class SequenceRange(from: Long, to: Long) {
-  val range = to - from
+  val length = to - from
 }

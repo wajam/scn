@@ -8,6 +8,7 @@ import scala.collection.JavaConversions._
 import com.wajam.nrv.cluster.zookeeper.ZookeeperClient
 import com.wajam.nrv.protocol.Protocol
 import com.wajam.nrv.Logging
+import com.yammer.metrics.scala.Instrumented
 
 /**
  * SCN service that generates atomically increasing sequence number or uniquely increasing timestamp.
@@ -19,77 +20,84 @@ import com.wajam.nrv.Logging
  */
 class Scn(serviceName: String = "scn",
           protocol: Option[Protocol],
-          storageType: StorageType.Value = StorageType.zookeeper,
+          storageType: StorageType.Value = StorageType.ZOOKEEPER,
           zookeeperClient: Option[ZookeeperClient] = None)
 
-  extends Service(serviceName, protocol, Some(new Resolver(tokenExtractor = Resolver.TOKEN_HASH_PARAM("name")))) with Logging {
+  extends Service(serviceName, protocol, Some(new Resolver(tokenExtractor = Resolver.TOKEN_HASH_PARAM("name"))))
+  with Logging with Instrumented {
+  private val metricGetNextSequence = metrics.timer("scn-getnext-sequence")
+  private val metricGetNextTimestamp = metrics.timer("scn-getnext-timestamp")
 
   def this(serviceName: String,
-           storageType: StorageType.Value = StorageType.zookeeper,
+           storageType: StorageType.Value = StorageType.ZOOKEEPER,
            zookeeperClient: Option[ZookeeperClient] = None) = this(serviceName, None, storageType, zookeeperClient)
 
   private val sequenceActors = new ConcurrentHashMap[String, SequenceActor[Long]]
   private val timestampActors = new ConcurrentHashMap[String, SequenceActor[Timestamp]]
 
   // Construction argument validation
-  if (storageType.eq(StorageType.zookeeper) && zookeeperClient == None)
+  if (storageType.eq(StorageType.ZOOKEEPER) && zookeeperClient == None)
     throw new IllegalArgumentException("Zookeeper storage type require ZookeeperClient argument.")
 
   private[scn] val nextTimestamp = this.registerAction(new Action("/timestamp/:name/next", msg => {
-    val name = msg.parameters("name").toString
-    val nb = msg.parameters("nb").toString.toInt
+    this.metricGetNextTimestamp.time {
+      val name = msg.parameters("name").toString
+      val nb = msg.parameters("nb").toString.toInt
 
-    val timestampActor = timestampActors.getOrElse(name, {
-      val actor = new SequenceActor[Timestamp](storageType match {
-        case StorageType.zookeeper =>
-          new ZookeeperTimestampStorage(zookeeperClient.get, name)
-        case StorageType.memory =>
-          new InMemoryTimestampStorage()
+      val timestampActor = timestampActors.getOrElse(name, {
+        val actor = new SequenceActor[Timestamp](storageType match {
+          case StorageType.ZOOKEEPER =>
+            new ZookeeperTimestampStorage(zookeeperClient.get, name)
+          case StorageType.MEMORY =>
+            new InMemoryTimestampStorage()
+        })
+        actor.start()
+        Option(timestampActors.putIfAbsent(name, actor)).getOrElse(actor)
       })
-      actor.start()
-      Option(timestampActors.putIfAbsent(name, actor)).getOrElse(actor)
-    })
 
-    timestampActor.next(seq => {
-      val hdr = Map("name" -> name, "sequence" -> seq)
-      msg.reply(hdr)
-    }, nb)
+      timestampActor.next(seq => {
+        val hdr = Map("name" -> name, "sequence" -> seq)
+        msg.reply(hdr)
+      }, nb)
+    }
   }))
 
-  private[scn] def getNextTimestamp(name: String, cb: (List[Timestamp], Option[Exception]) => Unit, nb: Int) {
+  private[scn] def getNextTimestamp(name: String, cb: (Seq[Timestamp], Option[Exception]) => Unit, nb: Int) {
     this.nextTimestamp.call(params = Map("name" -> name, "nb" -> nb), onReply = (respMsg, optException) => {
       if (optException.isEmpty)
-        cb(respMsg.parameters("sequence").asInstanceOf[List[Timestamp]], None)
+        cb(respMsg.parameters("sequence").asInstanceOf[Seq[Timestamp]], None)
       else
         cb(Nil, optException)
     })
   }
 
   private[scn] val nextSequence = this.registerAction(new Action("/sequence/:name/next", msg => {
-    val name = msg.parameters("name").toString
-    val nb = msg.parameters("nb").toString.toInt
+    this.metricGetNextSequence.time {
+      val name = msg.parameters("name").toString
+      val nb = msg.parameters("nb").toString.toInt
 
-    val sequenceActor = sequenceActors.getOrElse(name, {
-      val actor = new SequenceActor[Long](storageType match {
-        case StorageType.zookeeper =>
-          new ZookeeperSequenceStorage(zookeeperClient.get, name)
-        case StorageType.memory =>
-          new InMemorySequenceStorage()
+      val sequenceActor = sequenceActors.getOrElse(name, {
+        val actor = new SequenceActor[Long](storageType match {
+          case StorageType.ZOOKEEPER =>
+            new ZookeeperSequenceStorage(zookeeperClient.get, name)
+          case StorageType.MEMORY =>
+            new InMemorySequenceStorage()
+        })
+        actor.start()
+        Option(sequenceActors.putIfAbsent(name, actor)).getOrElse(actor)
       })
-      actor.start()
-      Option(sequenceActors.putIfAbsent(name, actor)).getOrElse(actor)
-    })
 
-    sequenceActor.next(seq => {
-      val hdr = Map("name" -> name, "sequence" -> seq)
-      msg.reply(hdr)
-    }, nb)
+      sequenceActor.next(seq => {
+        val hdr = Map("name" -> name, "sequence" -> seq)
+        msg.reply(hdr)
+      }, nb)
+    }
   }))
 
-  private[scn] def getNextSequence(name: String, cb: (List[Long], Option[Exception]) => Unit, nb: Int) {
+  private[scn] def getNextSequence(name: String, cb: (Seq[Long], Option[Exception]) => Unit, nb: Int) {
     this.nextSequence.call(params = Map("name" -> name, "nb" -> nb), onReply = (respMsg, optException) => {
       if (optException.isEmpty)
-        cb(respMsg.parameters("sequence").asInstanceOf[List[Long]], None)
+        cb(respMsg.parameters("sequence").asInstanceOf[Seq[Long]], None)
       else
         cb(Nil, optException)
     })

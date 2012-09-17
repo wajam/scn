@@ -15,7 +15,11 @@ object ScnTimestamp {
   val MIN_SEQ_NO = 0
   val MAX_SEQ_NO = 9999
 
-  def apply(timevalue: Long, seq: Long):ScnTimestamp = {
+  def apply(ts: Timestamp): ScnTimestamp = {
+    ScnTimestamp(ts.value)
+  }
+
+  def apply(timevalue: Long, seq: Long): ScnTimestamp = {
     if (seq > ScnTimestamp.MAX_SEQ_NO)
       throw new IndexOutOfBoundsException
 
@@ -29,6 +33,8 @@ object TimestampUtil {
   val MAX_SEQ_NO = 9999
 
   val now = ScnTimestamp(System.currentTimeMillis(), MIN_SEQ_NO)
+
   def MAX = ScnTimestamp(Long.MaxValue, MAX_SEQ_NO)
+
   def MIN = ScnTimestamp(0, MIN_SEQ_NO)
 }

@@ -26,7 +26,7 @@ class ZookeeperSequenceStorage(zkClient: ZookeeperClient, name: String) extends 
   def next(count: Int): List[Long] = {
     val batchSize = math.max(count, MIN_BATCH_SIZE)
 
-    if (lastSeq.range < count) {
+    if (lastSeq.length < count) {
       lastSeq = SequenceRange(lastSeq.to, zkClient.incrementCounter("/scn/sequence/%s".format(name), batchSize, 1))
     }
 

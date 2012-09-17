@@ -5,6 +5,6 @@ package com.wajam.scn.storage
  */
 trait CurrentTime {
 
-  def getCurrentTime = System.currentTimeMillis()
+  def currentTime = System.currentTimeMillis()
 
 }

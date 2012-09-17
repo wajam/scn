@@ -1,10 +1,9 @@
 package com.wajam.scn
 
-import actors.Actor
-import collection.mutable
-import java.util.{TimerTask, Timer}
 import scala.Option
-import com.wajam.nrv.Logging
+import com.yammer.metrics.scala.Instrumented
+import java.util.concurrent._
+import scala.collection.JavaConversions._
 
 /**
  * Description
@@ -13,94 +12,42 @@ import com.wajam.nrv.Logging
  * @copyright Copyright (c) Wajam inc.
  *
  */
-class ScnClient(scn: Scn) {
+class ScnClient(scn: Scn) extends Instrumented {
+  private val metricSequenceStackSize = metrics.gauge[Int]("scn-sequences-stack-size")({
+    sequenceStackActors.size()
+  })
+  private val metricTimestampStackSize = metrics.gauge[Int]("scn-timestamps-stack-size")({
+    timestampStackActors.size()
+  })
+  private val metricNbCalls = metrics.counter("scn-calls")
 
-  private val callStackActor = new ScnCallStackActor(scn)
-  callStackActor.start()
+  private val sequenceStackActors = new ConcurrentHashMap[String, ScnCallStackActor[Long]]
+  private val timestampStackActors = new ConcurrentHashMap[String, ScnCallStackActor[Timestamp]]
 
-  def getNextTimestamp(name: String, cb: (List[_], Option[Exception]) => Unit, nb: Int) {
-    callStackActor ! Next(name, ScnCallback(cb, nb), ScnCallbackType.timestamp)
+  def getNextTimestamp(name: String, cb: (Seq[Timestamp], Option[Exception]) => Unit, nb: Int) {
+    val timestampActor = timestampStackActors.getOrElse(name, {
+      val actor = new ScnTimestampCallStackActor[Timestamp](scn, name)
+      actor.start()
+      Option(timestampStackActors.putIfAbsent(name, actor)).getOrElse(actor)
+    })
+    timestampActor ! Batched[Timestamp](ScnCallback[Timestamp](cb, nb))
+    metricNbCalls.count
   }
 
-  def getNextSequence(name: String, cb: (List[_], Option[Exception]) => Unit, nb: Int) {
-    callStackActor ! Next(name, ScnCallback(cb, nb), ScnCallbackType.sequence)
+  def getNextSequence(name: String, cb: (Seq[Long], Option[Exception]) => Unit, nb: Int) {
+    val sequenceActor = sequenceStackActors.getOrElse(name, {
+      val actor = new ScnSequenceCallStackActor[Long](scn, name)
+      actor.start()
+      Option(sequenceStackActors.putIfAbsent(name, actor)).getOrElse(actor)
+    })
+    sequenceActor ! Batched[Long](ScnCallback[Long](cb, nb))
+    metricNbCalls.count
   }
 
 }
 
-case class Next(name: String, cb: ScnCallback, seqType: ScnCallbackType.Value)
+case class Batched[T](cb: ScnCallback[T])
 
-case class Fullfill()
+case class Execute()
 
-private class ScnCallStackActor(scn: Scn) extends Actor with Logging {
-
-  private val timer = new Timer
-  private val TIMEOUT_CHECK_IN_MS = 10
-  private val cbStacks = new mutable.HashMap[String, CountedScnCallStack]
-
-  def act() {
-    loop {
-      react {
-        case Next(name: String, cb: ScnCallback, cbType: ScnCallbackType.Value) =>
-          cbStacks.getOrElse(name, {
-            cbStacks.put(name, CountedScnCallStack(new mutable.Stack[ScnCallback](), cbType))
-            cbStacks(name)
-          }).push(cb)
-        case Fullfill() =>
-          cbStacks.foreach {
-            case (name: String, stack: CountedScnCallStack) =>
-              val fullfillCnt = stack.count
-              if (fullfillCnt > 0) {
-                stack.cbType match {
-                  case ScnCallbackType.sequence =>
-                    scn.getNextSequence(name, (seq, optException) => {
-                      if (optException.isDefined) {
-                        stack.count += fullfillCnt
-                      } else {
-                        var range = SequenceRange(0, seq.length)
-                        while (stack.top != null && range.range >= stack.top.nb) {
-                          val scnCb = stack.pop()
-                          // Fullfill the callback
-                          scnCb.callback(seq.slice(range.from.toInt, scnCb.nb), None)
-                          range = SequenceRange(scnCb.nb, seq.length)
-                        }
-                      }
-                    }, fullfillCnt)
-                  case ScnCallbackType.timestamp =>
-                    scn.getNextTimestamp(name, (seq, optException) => {
-                      if (optException.isDefined) {
-                        stack.count += fullfillCnt
-                      } else {
-                        var range = SequenceRange(0, seq.length)
-                        while (stack.top != null && range.range >= stack.top.nb) {
-                          val scnCb = stack.pop()
-                          // Fullfill the callback
-                          scnCb.callback(seq.slice(range.from.toInt, scnCb.nb), None)
-                          range = SequenceRange(scnCb.nb, seq.length)
-                        }
-                      }
-                    }, fullfillCnt)
-                }
-                stack.count -= fullfillCnt
-              }
-          }
-        case _ => throw new UnsupportedOperationException
-      }
-    }
-  }
-
-  override def start(): Actor = {
-    super.start()
-    timer.scheduleAtFixedRate(new TimerTask {
-      def run() {
-        fullfill()
-      }
-    }, 0, TIMEOUT_CHECK_IN_MS)
-    this
-  }
-
-  def fullfill() {
-    this ! Fullfill()
-  }
-}
 

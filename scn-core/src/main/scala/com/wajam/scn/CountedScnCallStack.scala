@@ -10,27 +10,20 @@ import collection.mutable
  * @copyright Copyright (c) Wajam inc.
  *
  */
-case class CountedScnCallStack(private val cbStack: mutable.Stack[ScnCallback], cbType: ScnCallbackType.Value, var count: Int = 0) {
-  def push(cb: ScnCallback) {
+case class CountedScnCallStack[T](private val cbStack: mutable.Stack[ScnCallback[T]], var count: Int = 0) {
+  def push(cb: ScnCallback[T]) {
     cbStack.push(cb)
     count += cb.nb
   }
 
-  def pop(): ScnCallback = {
-    val cb = cbStack.pop()
-    cb
+  def pop(): ScnCallback[T] = {
+    cbStack.pop()
   }
 
-  /**
-   * Get the top of the stack
-   * @return Callback on top or null
-   */
-  def top: ScnCallback = cbStack.headOption.getOrElse(null)
+  def top: Option[ScnCallback[T]] = cbStack.headOption
+
+  def hasMore: Boolean = cbStack.size > 0
 }
 
-case class ScnCallback(callback: (List[_], Option[Exception]) => Unit, nb: Int)
+case class ScnCallback[-T](callback: (Seq[T], Option[Exception]) => Unit, nb: Int)
 
-object ScnCallbackType extends Enumeration {
-  type SequenceType = Value
-  val sequence, timestamp = Value
-}
