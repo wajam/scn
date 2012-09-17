@@ -35,7 +35,7 @@ with BeforeAndAfterAll with BeforeAndAfterEach {
     val protocol = new NrvProtocol(cluster.localNode, cluster)
     cluster.registerProtocol(protocol)
 
-    scn = new Scn("scn", Some(protocol), StorageType.MEMORY)
+    scn = new Scn("scn", Some(protocol), ScnConfig(), StorageType.MEMORY)
     cluster.registerService(scn)
     scn.addMember(0, cluster.localNode)
 

@@ -20,18 +20,19 @@ import com.yammer.metrics.scala.Instrumented
  */
 class Scn(serviceName: String = "scn",
           protocol: Option[Protocol],
+          config: ScnConfig,
           storageType: StorageType.Value = StorageType.ZOOKEEPER,
-          zookeeperClient: Option[ZookeeperClient] = None,
-          config: ScnConfig = ScnConfig())
-
+          zookeeperClient: Option[ZookeeperClient] = None)
   extends Service(serviceName, protocol, Some(new Resolver(tokenExtractor = Resolver.TOKEN_HASH_PARAM("name"))))
   with Logging with Instrumented {
-  private val metricGetNextSequence = metrics.timer("scn-getnext-sequence")
-  private val metricGetNextTimestamp = metrics.timer("scn-getnext-timestamp")
 
   def this(serviceName: String,
+           config: ScnConfig,
            storageType: StorageType.Value = StorageType.ZOOKEEPER,
-           zookeeperClient: Option[ZookeeperClient] = None) = this(serviceName, None, storageType, zookeeperClient)
+           zookeeperClient: Option[ZookeeperClient] = None) = this(serviceName, None, config, storageType, zookeeperClient)
+
+  private val metricGetNextSequence = metrics.timer("scn-getnext-sequence")
+  private val metricGetNextTimestamp = metrics.timer("scn-getnext-timestamp")
 
   private val sequenceActors = new ConcurrentHashMap[String, SequenceActor[Long]]
   private val timestampActors = new ConcurrentHashMap[String, SequenceActor[Timestamp]]

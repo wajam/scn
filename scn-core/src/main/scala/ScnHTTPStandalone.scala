@@ -1,7 +1,7 @@
 import com.wajam.nrv.cluster.zookeeper.ZookeeperClient
 import com.wajam.nrv.cluster.{StaticClusterManager, Node, Cluster}
 import com.wajam.nrv.protocol.HttpProtocol
-import com.wajam.scn.Scn
+import com.wajam.scn.{ScnConfig, Scn}
 import com.wajam.scn.storage.StorageType
 
 /**
@@ -21,7 +21,7 @@ object ScnHTTPStandalone {
     val protocol = new HttpProtocol("scn", cluster.localNode, cluster)
     cluster.registerProtocol(protocol)
 
-    val scn = new Scn("scn", Some(protocol), StorageType.ZOOKEEPER, Some(new ZookeeperClient("127.0.0.1")))
+    val scn = new Scn("scn", Some(protocol), ScnConfig(), StorageType.ZOOKEEPER, Some(new ZookeeperClient("127.0.0.1")))
     cluster.registerService(scn)
     scn.addMember(0, cluster.localNode)
 
