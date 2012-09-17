@@ -6,12 +6,11 @@ import com.wajam.scn.SequenceRange
 /**
  * Sequence storage that stores sequences in Zookeeper
  */
-class ZookeeperSequenceStorage(zkClient: ZookeeperClient, name: String) extends ScnStorage[Long] {
+class ZookeeperSequenceStorage(zkClient: ZookeeperClient, name: String, private val saveAheadSize: Int) extends ScnStorage[Long] {
   zkClient.ensureExists("/scn", "".getBytes)
   zkClient.ensureExists("/scn/sequence", "".getBytes)
   zkClient.ensureExists("/scn/sequence/%s".format(name), "0".getBytes)
 
-  private val MIN_BATCH_SIZE = 100
   private var lastSeq = SequenceRange(0, 1)
 
   def head: Long = lastSeq.from
@@ -24,7 +23,7 @@ class ZookeeperSequenceStorage(zkClient: ZookeeperClient, name: String) extends 
    * @return Inclusive from and to sequence
    */
   def next(count: Int): List[Long] = {
-    val batchSize = math.max(count, MIN_BATCH_SIZE)
+    val batchSize = math.max(count, saveAheadSize)
 
     if (lastSeq.length < count) {
       lastSeq = SequenceRange(lastSeq.to, zkClient.incrementCounter("/scn/sequence/%s".format(name), batchSize, 1))

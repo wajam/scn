@@ -7,7 +7,7 @@ import org.scalatest.FunSuite
 
 @RunWith(classOf[JUnitRunner])
 class TestZookeeperSequenceStorage extends FunSuite {
-  val storage = new ZookeeperSequenceStorage(new ZookeeperClient("127.0.0.1"), "it_seq_test")
+  val storage = new ZookeeperSequenceStorage(new ZookeeperClient("127.0.0.1"), "it_seq_test", 100)
 
   test("increment") {
     val range = storage.next(10)

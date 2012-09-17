@@ -12,7 +12,7 @@ import scala.collection.JavaConversions._
  * @copyright Copyright (c) Wajam inc.
  *
  */
-class ScnClient(scn: Scn) extends Instrumented {
+class ScnClient(scn: Scn, config: ScnClientConfig = ScnClientConfig()) extends Instrumented {
   private val metricSequenceStackSize = metrics.gauge[Int]("scn-sequences-stack-size")({
     sequenceStackActors.size()
   })
@@ -26,7 +26,7 @@ class ScnClient(scn: Scn) extends Instrumented {
 
   def getNextTimestamp(name: String, cb: (Seq[Timestamp], Option[Exception]) => Unit, nb: Int) {
     val timestampActor = timestampStackActors.getOrElse(name, {
-      val actor = new ScnTimestampCallStackActor[Timestamp](scn, name)
+      val actor = new ScnTimestampCallStackActor[Timestamp](scn, name, config.executionRateInMs)
       actor.start()
       Option(timestampStackActors.putIfAbsent(name, actor)).getOrElse(actor)
     })
@@ -36,7 +36,7 @@ class ScnClient(scn: Scn) extends Instrumented {
 
   def getNextSequence(name: String, cb: (Seq[Long], Option[Exception]) => Unit, nb: Int) {
     val sequenceActor = sequenceStackActors.getOrElse(name, {
-      val actor = new ScnSequenceCallStackActor[Long](scn, name)
+      val actor = new ScnSequenceCallStackActor[Long](scn, name, config.executionRateInMs)
       actor.start()
       Option(sequenceStackActors.putIfAbsent(name, actor)).getOrElse(actor)
     })

@@ -21,7 +21,8 @@ import com.yammer.metrics.scala.Instrumented
 class Scn(serviceName: String = "scn",
           protocol: Option[Protocol],
           storageType: StorageType.Value = StorageType.ZOOKEEPER,
-          zookeeperClient: Option[ZookeeperClient] = None)
+          zookeeperClient: Option[ZookeeperClient] = None,
+          config: ScnConfig = ScnConfig())
 
   extends Service(serviceName, protocol, Some(new Resolver(tokenExtractor = Resolver.TOKEN_HASH_PARAM("name"))))
   with Logging with Instrumented {
@@ -47,7 +48,7 @@ class Scn(serviceName: String = "scn",
       val timestampActor = timestampActors.getOrElse(name, {
         val actor = new SequenceActor[Timestamp](storageType match {
           case StorageType.ZOOKEEPER =>
-            new ZookeeperTimestampStorage(zookeeperClient.get, name)
+            new ZookeeperTimestampStorage(zookeeperClient.get, name, config.timestampSaveAheadMs)
           case StorageType.MEMORY =>
             new InMemoryTimestampStorage()
         })
@@ -79,7 +80,7 @@ class Scn(serviceName: String = "scn",
       val sequenceActor = sequenceActors.getOrElse(name, {
         val actor = new SequenceActor[Long](storageType match {
           case StorageType.ZOOKEEPER =>
-            new ZookeeperSequenceStorage(zookeeperClient.get, name)
+            new ZookeeperSequenceStorage(zookeeperClient.get, name, config.sequenceSaveAheadSize)
           case StorageType.MEMORY =>
             new InMemorySequenceStorage()
         })

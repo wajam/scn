@@ -7,7 +7,8 @@ import com.wajam.nrv.Logging
 /**
  *
  */
-class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String) extends ScnStorage[Timestamp] with CurrentTime with Logging {
+class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String, private[storage] val saveAheadInMs: Int)
+  extends ScnStorage[Timestamp] with CurrentTime with Logging {
 
   zkClient.ensureExists("/scn", "".getBytes)
   zkClient.ensureExists("/scn/timestamp", "".getBytes)
@@ -16,8 +17,6 @@ class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String) extends
   private var lastTime = -1L
   private var lastSeq = SequenceRange(0, 1)
   private var savedAhead = zkClient.getLong("/scn/timestamp/%s".format(name))
-
-  val SAVE_AHEAD_MS = 6000
 
   def head: Timestamp = ScnTimestamp(savedAhead, 0)
 
@@ -38,7 +37,7 @@ class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String) extends
 
     if (ScnTimestamp(reqTime, 0) >= head) {
       // Save ahead
-      savedAhead = reqTime + SAVE_AHEAD_MS
+      savedAhead = reqTime + saveAheadInMs
       zkClient.set("/scn/timestamp/%s".format(name), savedAhead.toString.getBytes)
     }
 

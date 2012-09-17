@@ -9,7 +9,7 @@ import org.scalatest.{BeforeAndAfter, FunSuite}
 class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
   val TS_NAME = "it_ts_tests"
   val zkClient = new ZookeeperClient("127.0.0.1")
-  val storage = new ZookeeperTimestampStorage(zkClient, TS_NAME)
+  val storage = new ZookeeperTimestampStorage(zkClient, TS_NAME, 5000)
 
   test("increment") {
     val range = storage.next(10)
@@ -33,18 +33,18 @@ class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
 
     storage.next(1)
     // Wait 2 times to Save ahead time to make sure a new head is written
-    Thread.sleep(storage.SAVE_AHEAD_MS * 2)
+    Thread.sleep(storage.saveAheadInMs * 2)
     storage.next(1)
 
     // Head saved in Zookeeper must be smaller than now + save_ahead time since the request is done
-    assert(head < ScnTimestamp(System.currentTimeMillis() + storage.SAVE_AHEAD_MS, 0), head)
+    assert(head < ScnTimestamp(System.currentTimeMillis() + storage.saveAheadInMs, 0), head)
   }
 
   test("storage with drifting clock") {
-    val inTimeStorage = new ZookeeperTimestampStorage(zkClient, TS_NAME + 1)
+    val inTimeStorage = new ZookeeperTimestampStorage(zkClient, TS_NAME + 1, 5000)
     val onTime = inTimeStorage.next(1)
 
-    val driftedStorage = new ZookeeperTimestampStorage(zkClient, TS_NAME + 1) with CurrentTime {
+    val driftedStorage = new ZookeeperTimestampStorage(zkClient, TS_NAME + 1, 5000) with CurrentTime {
       override def currentTime = System.currentTimeMillis() - (10 * 1000) // 1 minute late clock
     }
 

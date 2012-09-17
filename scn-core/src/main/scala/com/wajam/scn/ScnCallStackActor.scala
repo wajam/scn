@@ -13,8 +13,8 @@ import storage.{TimestampUtil, ScnTimestamp}
  * @copyright Copyright (c) Wajam inc.
  *
  */
-private class ScnSequenceCallStackActor[Long](scn: Scn, seqName: String)
-  extends ScnCallStackActor[Long](scn, seqName) {
+private class ScnSequenceCallStackActor[Long](scn: Scn, seqName: String, private val executionRateInMs: Int)
+  extends ScnCallStackActor[Long](scn, seqName, executionRateInMs) {
 
   protected val stack = CountedScnCallStack[Long](new mutable.Stack[ScnCallback[Long]]())
 
@@ -43,8 +43,8 @@ private class ScnSequenceCallStackActor[Long](scn: Scn, seqName: String)
   }
 }
 
-private class ScnTimestampCallStackActor[Timestamp](scn: Scn, seqName: String)
-  extends ScnCallStackActor[Timestamp](scn, seqName) {
+private class ScnTimestampCallStackActor[Timestamp](scn: Scn, seqName: String, private val EXECUTION_RATE_IN_MS: Int)
+  extends ScnCallStackActor[Timestamp](scn, seqName, EXECUTION_RATE_IN_MS) {
 
   protected val stack = CountedScnCallStack[Timestamp](new mutable.Stack[ScnCallback[Timestamp]]())
   private var lastAllocated: ScnTimestamp = TimestampUtil.MIN
@@ -78,12 +78,10 @@ private class ScnTimestampCallStackActor[Timestamp](scn: Scn, seqName: String)
   }
 }
 
-abstract private class ScnCallStackActor[T](scn: Scn, seqName: String)
+abstract private class ScnCallStackActor[T](scn: Scn, seqName: String, private val EXECUTION_RATE_IN_MS: Int)
   extends Actor with Logging {
 
   private val timer = new Timer
-  private val TIMEOUT_CHECK_IN_MS = 10
-
   protected val stack: CountedScnCallStack[T]
 
   protected def batch(cb: ScnCallback[T])
@@ -108,7 +106,7 @@ abstract private class ScnCallStackActor[T](scn: Scn, seqName: String)
       def run() {
         fullfill()
       }
-    }, 0, TIMEOUT_CHECK_IN_MS)
+    }, 0, EXECUTION_RATE_IN_MS)
     this
   }
 
