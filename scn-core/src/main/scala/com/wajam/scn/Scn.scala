@@ -53,8 +53,11 @@ class Scn(serviceName: String = "scn",
           case StorageType.MEMORY =>
             new InMemoryTimestampStorage()
         })
-        actor.start()
-        Option(timestampActors.putIfAbsent(name, actor)).getOrElse(actor)
+
+        Option(timestampActors.putIfAbsent(name, actor)).getOrElse({
+          actor.start()
+          actor
+        })
       })
 
       timestampActor.next(seq => {
@@ -85,8 +88,10 @@ class Scn(serviceName: String = "scn",
           case StorageType.MEMORY =>
             new InMemorySequenceStorage()
         })
-        actor.start()
-        Option(sequenceActors.putIfAbsent(name, actor)).getOrElse(actor)
+        Option(sequenceActors.putIfAbsent(name, actor)).getOrElse({
+          actor.start()
+          actor
+        })
       })
 
       sequenceActor.next(seq => {
