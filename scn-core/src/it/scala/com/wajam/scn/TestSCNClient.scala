@@ -74,7 +74,7 @@ with BeforeAndAfterAll with BeforeAndAfterEach {
 
   test("next sequence batching") {
     val spyScn = spy(scn)
-    val scnClient = new ScnClient(spyScn)
+    val scnClient = new ScnClient(spyScn, ScnClientConfig(1000))
 
     val count = 10
     val latch = new CountDownLatch(count)
@@ -83,7 +83,7 @@ with BeforeAndAfterAll with BeforeAndAfterEach {
     var len = 0
 
     for (i <- 0 to count) {
-      // Should be in the same 10ms
+      // Should be in the same 1000ms
       scnClient.getNextSequence("test_batch", (seq, optEx) => {
         res = seq
         len += seq.length
@@ -93,7 +93,7 @@ with BeforeAndAfterAll with BeforeAndAfterEach {
 
     latch.await()
 
-    verify(spyScn, atMost(5)).getNextSequence(Matchers.eq("test_batch"), any(), Matchers.anyInt())
+    verify(spyScn, atMost(1)).getNextSequence(Matchers.eq("test_batch"), any(), Matchers.anyInt())
   }
 
   test("multiple sequence and timestamps") {

@@ -16,14 +16,14 @@ object ScnTimestamp {
   val MAX_SEQ_NO = 9999
 
   def apply(ts: Timestamp): ScnTimestamp = {
-    ScnTimestamp(ts.value)
+    new ScnTimestamp(ts.value)
   }
 
   def apply(timevalue: Long, seq: Long): ScnTimestamp = {
     if (seq > ScnTimestamp.MAX_SEQ_NO)
       throw new IndexOutOfBoundsException
 
-    ScnTimestamp(timevalue * 10000 + seq)
+    new ScnTimestamp(timevalue * 10000 + seq)
   }
 }
 
