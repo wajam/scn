@@ -2,22 +2,78 @@ package com.wajam.scn
 
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
-import org.scalatest.FunSuite
+import org.scalatest.{BeforeAndAfterEach, FunSuite}
+import java.util.concurrent.CountDownLatch
+import storage.{ScnStorage, InMemorySequenceStorage}
 
 @RunWith(classOf[JUnitRunner])
-class TestSequenceActor extends FunSuite {
+class TestSequenceActor extends FunSuite with BeforeAndAfterEach {
+  var storage: ScnStorage[Long] = null
+  var actor: SequenceActor[Long] = null
 
-  val actor: SequenceActor = new SequenceActor(new InMemorySequenceStorage)
-  actor.start()
+  override def beforeEach() {
+    storage = new InMemorySequenceStorage
+    actor = new SequenceActor[Long](storage)
+    actor.start()
+  }
 
-  test("should generate unique sequence id") {
-    for (i <- 0 to 9999) {
-      val value = actor.next("test%d".format(i % 10))
+  test("unicity of generated ids") {
+    var results = List[Long]()
+
+    for (i <- 0 to 999) {
+      actor.next(values => {
+        results = results ::: values
+      }, 1)
     }
 
-    for (i <- 0 to 9) {
-      val value = actor.next("test%d".format(i))
-      assert(value == 1011, value)
+    val latch = new CountDownLatch(1)
+
+    actor.next(values => {
+      results = results ::: values
+      latch.countDown()
+    }, 100)
+
+    latch.await()
+
+    assert(results === results.distinct)
+    assert(results.size === 1100)
+  }
+
+  test("sequence generation with batching of 10") {
+    for (i <- 0 to 999) {
+      actor.next(_ => {}, 1)
     }
+
+    val latch = new CountDownLatch(1)
+    var results = List[Long]()
+
+    actor.next(values => {
+      results = values
+      latch.countDown()
+    }, 10)
+
+    latch.await()
+
+    assert(results === List.range(1001, 1001 + 10), results)
+    assert(results.size === 10)
+  }
+
+  test("sequence generation with batching of 101") {
+    for (i <- 0 to 999) {
+      actor.next(_ => {}, 1)
+    }
+
+    val latch = new CountDownLatch(1)
+    var results = List[Long]()
+
+    actor.next(values => {
+      results = values
+      latch.countDown()
+    }, 101)
+
+    latch.await()
+
+    assert(results === List.range(1001, 1001 + 101), results)
+    assert(results.size === 101)
   }
 }
