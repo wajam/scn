@@ -5,7 +5,7 @@ import com.wajam.scn.{SequenceRange, Timestamp}
 import com.wajam.nrv.Logging
 
 /**
- *
+ * Sequence storage that stores timestamps in Zookeeper
  */
 class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String, private[storage] val saveAheadInMs: Int)
   extends ScnStorage[Timestamp] with CurrentTime with Logging {

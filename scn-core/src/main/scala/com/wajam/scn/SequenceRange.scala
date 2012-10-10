@@ -1,7 +1,7 @@
 package com.wajam.scn
 
 /**
- * Description
+ * Describe a sequence range
  *
  * @author : Jerome Gagnon <jerome@wajam.com>
  * @copyright Copyright (c) Wajam inc.

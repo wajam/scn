@@ -4,7 +4,7 @@ import collection.mutable
 import com.wajam.nrv.tracing.TraceContext
 
 /**
- * Description
+ * A queue to manage scn callbacks waiting for sequence/timestamps.
  *
  *
  * @author : Jerome Gagnon <jerome@wajam.com>
@@ -28,6 +28,9 @@ case class CountedScnCallQueue[T](private val cbQueue: mutable.Queue[ScnCallback
   def hasMore: Boolean = !cbQueue.isEmpty
 }
 
+/*
+ * Structure to hold callback related information and context.
+ */
 case class ScnCallback[T](callback: (Seq[T], Option[Exception]) => Unit,
                            nb: Int,
                            startTime: Long = 0,

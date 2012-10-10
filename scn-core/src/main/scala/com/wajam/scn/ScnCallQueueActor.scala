@@ -8,7 +8,8 @@ import storage.TimestampUtil
 import com.wajam.nrv.tracing.Traced
 
 /**
- * Description
+ * Actor that batches scn calls to get sequence numbers. It periodically call scn to get sequence numbers and then
+ * assign those sequence numbers to the caller in order.
  *
  * @author : Jerome Gagnon <jerome@wajam.com>
  * @copyright Copyright (c) Wajam inc.
@@ -36,6 +37,14 @@ class ScnSequenceCallQueueActor(scn: Scn, seqName: String, executionRateInMs: In
   }
 }
 
+/**
+ * Actor that batches scn calls to get timestamps. It periodically call scn to get timestamps and then
+ * assign those timestamp numbers to the caller in order.
+ *
+ * @author : Jerome Gagnon <jerome@wajam.com>
+ * @copyright Copyright (c) Wajam inc.
+ *
+ */
 class ScnTimestampCallQueueActor(scn: Scn, seqName: String, execRateInMs: Int,
                                  callbackExecutor: Option[CallbackExecutor[Timestamp]] = None)
   extends ScnCallQueueActor[Timestamp](scn, seqName, execRateInMs, callbackExecutor) {
@@ -64,6 +73,9 @@ class ScnTimestampCallQueueActor(scn: Scn, seqName: String, execRateInMs: Int,
   }
 }
 
+/**
+ * Base class for call queue actors.
+ */
 abstract class ScnCallQueueActor[T](scn: Scn, seqName: String, execRateInMs: Int,
                                     callbackExecutor: Option[CallbackExecutor[T]] = None)
   extends Actor with Logging with Traced {
@@ -121,18 +133,39 @@ abstract class ScnCallQueueActor[T](scn: Scn, seqName: String, execRateInMs: Int
   }
 }
 
+/**
+ * Call queue actors message classes
+ */
+// used to batch a scn call
 case class Batched[T](cb: ScnCallback[T])
 
-case class Callback[T](cb: ScnCallback[T], response: Seq[T])
-
-case class ExecuteOnScnResponse[T](response: Seq[T], error: Option[Exception])
-
+// used to periodically execute call to Scn
 case class Execute()
 
+// used to execute the Scn callback from the caller
+case class Callback[T](cb: ScnCallback[T], response: Seq[T])
+
+// used to execute the Scn response and dispatch to the callers
+case class ExecuteOnScnResponse[T](response: Seq[T], error: Option[Exception])
+
+
+/**
+ * Callback executor interface. This interface executes the callback from the caller.
+ */
 trait CallbackExecutor[T] {
+
+  /**
+   * Execute the callback
+   * @param cb the callback to execute
+   * @param response the response associated to the callback
+   */
   def executeCallback(cb: ScnCallback[T], response: Seq[T])
 }
 
+/**
+ * Default implementation that reset the trace context and call the callback.
+ * The callback is executed in an actor message loop.
+ */
 class DefaultCallbackExecutor[T](scn: Scn) extends Actor with CallbackExecutor[T] with Logging {
   def act() {
     loop {

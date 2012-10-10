@@ -2,6 +2,9 @@ package com.wajam.scn
 
 import storage.ScnTimestamp
 
+/**
+ * Describe a timestamp
+ */
 trait Timestamp extends Comparable[Timestamp] {
   def value: Long
 

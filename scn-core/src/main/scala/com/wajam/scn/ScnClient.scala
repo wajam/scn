@@ -6,7 +6,8 @@ import java.util.concurrent._
 import scala.collection.JavaConversions._
 
 /**
- * Description
+ * Scn client that front the SCN service and batches Scn calls to avoid excessive round trips between the
+ * service requesting Scn timestamps/sequence ids and the Scn server.
  *
  * @author : Jerome Gagnon <jerome@wajam.com>
  * @copyright Copyright (c) Wajam inc.
@@ -24,7 +25,14 @@ class ScnClient(scn: Scn, config: ScnClientConfig = ScnClientConfig()) extends I
   private val sequenceStackActors = new ConcurrentHashMap[String, ScnCallQueueActor[Long]]
   private val timestampStackActors = new ConcurrentHashMap[String, ScnCallQueueActor[Timestamp]]
 
-  def getNextTimestamp(name: String, cb: (Seq[Timestamp], Option[Exception]) => Unit, nb: Int) {
+  /**
+   * Fetch timestamps
+   *
+   * @param name timestamp sequence name
+   * @param cb callback to call once the timestamp are assigned
+   * @param nb the number of requested timestamps
+   */
+  def fetchTimestamps(name: String, cb: (Seq[Timestamp], Option[Exception]) => Unit, nb: Int) {
     val timestampActor = timestampStackActors.getOrElse(name, {
       val actor = new ScnTimestampCallQueueActor(scn, name, config.executionRateInMs)
       actor.start()
@@ -35,7 +43,14 @@ class ScnClient(scn: Scn, config: ScnClientConfig = ScnClientConfig()) extends I
     metricNbCalls.count
   }
 
-  def getNextSequence(name: String, cb: (Seq[Long], Option[Exception]) => Unit, nb: Int) {
+  /**
+   * Fetch sequence ids
+   *
+   * @param name sequence name
+   * @param cb callback to call once the sequence ids are assigned
+   * @param nb the number of requested sequence ids
+   */
+  def fetchSequenceIds(name: String, cb: (Seq[Long], Option[Exception]) => Unit, nb: Int) {
     val sequenceActor = sequenceStackActors.getOrElse(name, {
       val actor = new ScnSequenceCallQueueActor(scn, name, config.executionRateInMs)
       actor.start()

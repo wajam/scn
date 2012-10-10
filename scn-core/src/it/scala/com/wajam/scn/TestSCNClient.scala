@@ -51,7 +51,7 @@ with BeforeAndAfterAll with BeforeAndAfterEach {
   test("get next timestamp") {
     val latch = new CountDownLatch(1)
     var res = Seq.empty[Timestamp]
-    scnClient.getNextTimestamp("test", (seq, optEx) => {
+    scnClient.fetchTimestamps("test", (seq, optEx) => {
       res = seq
       latch.countDown()
     }, 1)
@@ -63,7 +63,7 @@ with BeforeAndAfterAll with BeforeAndAfterEach {
   test("get next sequence") {
     val latch = new CountDownLatch(1)
     var res = Seq.empty[Long]
-    scnClient.getNextSequence("test", (seq, optEx) => {
+    scnClient.fetchSequenceIds("test", (seq, optEx) => {
       res = seq
       latch.countDown()
     }, 1)
@@ -84,7 +84,7 @@ with BeforeAndAfterAll with BeforeAndAfterEach {
 
     for (i <- 0 to count) {
       // Should be in the same 1000ms
-      scnClient.getNextSequence("test_batch", (seq, optEx) => {
+      scnClient.fetchSequenceIds("test_batch", (seq, optEx) => {
         res = seq
         len += seq.length
         latch.countDown()
@@ -100,17 +100,17 @@ with BeforeAndAfterAll with BeforeAndAfterEach {
     val latch = new CountDownLatch(3)
     val res = mutable.Buffer.empty[Any]
 
-    scnClient.getNextSequence("1", (seq, optEx) => {
+    scnClient.fetchSequenceIds("1", (seq, optEx) => {
       res += seq
       latch.countDown()
     }, 1)
 
-    scnClient.getNextTimestamp("2", (seq, optEx) => {
+    scnClient.fetchTimestamps("2", (seq, optEx) => {
       res += seq
       latch.countDown()
     }, 1)
 
-    scnClient.getNextSequence("3", (seq, optEx) => {
+    scnClient.fetchSequenceIds("3", (seq, optEx) => {
       res += seq
       latch.countDown()
     }, 1)
