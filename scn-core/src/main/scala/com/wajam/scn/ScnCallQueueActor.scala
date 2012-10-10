@@ -95,13 +95,13 @@ abstract class ScnCallQueueActor[T](scn: Scn, seqName: String, execRateInMs: Int
   def act() {
     loop {
       react {
-        case Batched(cb: ScnCallback[T]) =>
-          batch(cb)
+        case toBatch: Batched[T] =>
+          batch(toBatch.cb)
         case Execute() =>
           execute()
         case ExecuteOnScnResponse(response: Seq[T], error: Option[Exception]) =>
           executeScnResponse(response, error)
-        case other => println(other); throw new UnsupportedOperationException()
+        case _ => throw new UnsupportedOperationException()
       }
     }
   }
@@ -137,12 +137,13 @@ class DefaultCallbackExecutor[T](scn: Scn) extends Actor with CallbackExecutor[T
   def act() {
     loop {
       react {
-        case Callback(cb: ScnCallback[T], res: Seq[T]) =>
-          scn.tracer.trace(cb.context) {
-            //execTimer.update(System.currentTimeMillis() - cb.startTime, TimeUnit.MILLISECONDS)
-            cb.callback(res, None)
+        case callback: Callback[T] =>
+          scn.tracer.trace(callback.cb.context) {
+            //TODO time the time it takes to get the scn response
+            // execTimer.update(System.currentTimeMillis() - cb.startTime, TimeUnit.MILLISECONDS)
+            callback.cb.callback(callback.response, None)
           }
-        case o => log.warn("Invalide message to callback executor!")
+        case _ => log.warn("Invalide message to callback executor!")
       }
     }
   }

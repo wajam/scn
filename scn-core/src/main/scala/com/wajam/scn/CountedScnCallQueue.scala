@@ -28,7 +28,7 @@ case class CountedScnCallQueue[T](private val cbQueue: mutable.Queue[ScnCallback
   def hasMore: Boolean = !cbQueue.isEmpty
 }
 
-case class ScnCallback[-T](callback: (Seq[T], Option[Exception]) => Unit,
+case class ScnCallback[T](callback: (Seq[T], Option[Exception]) => Unit,
                            nb: Int,
                            startTime: Long = 0,
                            context: Option[TraceContext] = None)
