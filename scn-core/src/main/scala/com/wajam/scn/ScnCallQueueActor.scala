@@ -174,7 +174,15 @@ class DefaultCallbackExecutor[T](scn: Scn) extends Actor with CallbackExecutor[T
           scn.tracer.trace(callback.cb.context) {
             //TODO time the time it takes to get the scn response
             // execTimer.update(System.currentTimeMillis() - cb.startTime, TimeUnit.MILLISECONDS)
-            callback.cb.callback(callback.response, None)
+            try {
+              callback.cb.callback(callback.response, None)
+            }
+            catch {
+              case ex: Exception => {
+                log.warn("Caught exception while executing the SCN callback." +
+                  " The callback code should catch exceptions and reply instead of throwing an exception.", ex)
+              }
+            }
           }
         case _ => log.warn("Invalide message to callback executor!")
       }
