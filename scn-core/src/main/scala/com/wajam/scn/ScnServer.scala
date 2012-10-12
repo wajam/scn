@@ -7,7 +7,7 @@ import com.wajam.scn.storage.StorageType
 import java.net.URL
 import org.apache.log4j.PropertyConfigurator
 import com.wajam.nrvext.scribe.ScribeTraceRecorder
-import com.wajam.nrv.tracing.NullTraceRecorder
+import com.wajam.nrv.tracing.{Tracer, NullTraceRecorder}
 import com.yammer.metrics.reporting.GraphiteReporter
 import java.util.concurrent.TimeUnit
 
@@ -31,7 +31,7 @@ class ScnServer(config: ScnConfiguration) {
 
   val manager = new StaticClusterManager
   val node = new Node("0.0.0.0", Map("nrv" -> config.getNrvListenPort, "scn" -> config.getHttpListenPort))
-  val cluster = new Cluster(node, manager)
+  val cluster = new Cluster(node, manager, tracer = new Tracer(traceRecorder))
 
   val scnStorage = config.getScnSequenceStorage
   val scnConfig = ScnConfig(config.getScnTimestampSaveAheadInMs, config.getScnSequenceSaveAheadSize)
@@ -44,7 +44,6 @@ class ScnServer(config: ScnConfiguration) {
 
   val protocol = new HttpProtocol("scn", cluster.localNode, cluster)
   cluster.registerProtocol(protocol)
-
   cluster.registerService(scn)
 
   val scnMembersString = config.getScnClusterMembers
