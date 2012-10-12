@@ -9,4 +9,4 @@ package com.wajam.scn
  */
 case class ScnConfig(timestampSaveAheadMs: Int = 6000, sequenceSaveAheadSize: Int = 100)
 
-case class ScnClientConfig(executionRateInMs: Int = 10)
+case class ScnClientConfig(executionRateInMs: Int = 10, timeoutInMs: Int = 1000)

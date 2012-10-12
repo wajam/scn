@@ -1,7 +1,7 @@
 package com.wajam.scn
 
 import java.util.{TimerTask, Timer}
-import com.wajam.nrv.Logging
+import com.wajam.nrv.{TimeoutException, Logging}
 import actors.Actor
 import scala.collection.mutable
 import storage.TimestampUtil
@@ -16,9 +16,9 @@ import java.util.concurrent.TimeUnit
  * @copyright Copyright (c) Wajam inc.
  *
  */
-class ScnSequenceCallQueueActor(scn: Scn, seqName: String, executionRateInMs: Int,
+class ScnSequenceCallQueueActor(scn: Scn, seqName: String, executionRateInMs: Int, timeoutInMs: Int,
                                 callbackExecutor: Option[CallbackExecutor[Long]] = None)
-  extends ScnCallQueueActor[Long](scn, seqName, "sequence", executionRateInMs, callbackExecutor) {
+  extends ScnCallQueueActor[Long](scn, seqName, "sequence", executionRateInMs, timeoutInMs, callbackExecutor) {
 
   protected def scnMethod = {
     scn.getNextSequence _
@@ -31,7 +31,7 @@ class ScnSequenceCallQueueActor(scn: Scn, seqName: String, executionRateInMs: In
       var sequenceNumbers = response
       while (queue.hasMore && sequenceNumbers.size >= queue.front.get.nb) {
         val scnCb = queue.dequeue()
-        executor.executeCallback(scnCb, sequenceNumbers.take(scnCb.nb))
+        executor.executeCallback(scnCb, Right(sequenceNumbers.take(scnCb.nb)))
         sequenceNumbers = sequenceNumbers.drop(scnCb.nb)
       }
     }
@@ -46,9 +46,9 @@ class ScnSequenceCallQueueActor(scn: Scn, seqName: String, executionRateInMs: In
  * @copyright Copyright (c) Wajam inc.
  *
  */
-class ScnTimestampCallQueueActor(scn: Scn, seqName: String, execRateInMs: Int,
+class ScnTimestampCallQueueActor(scn: Scn, seqName: String, execRateInMs: Int, timeoutInMs: Int,
                                  callbackExecutor: Option[CallbackExecutor[Timestamp]] = None)
-  extends ScnCallQueueActor[Timestamp](scn, seqName, "timestamps", execRateInMs, callbackExecutor) {
+  extends ScnCallQueueActor[Timestamp](scn, seqName, "timestamps", execRateInMs, timeoutInMs, callbackExecutor) {
 
   private var lastAllocated: Timestamp = TimestampUtil.MIN
 
@@ -66,7 +66,7 @@ class ScnTimestampCallQueueActor(scn: Scn, seqName: String, execRateInMs: Int,
       while (queue.hasMore && timestamps.size >= queue.front.get.nb) {
         val scnCb = queue.dequeue()
         val allocatedTimeStamps = timestamps.take(scnCb.nb)
-        executor.executeCallback(scnCb, allocatedTimeStamps)
+        executor.executeCallback(scnCb, Right(allocatedTimeStamps))
         lastAllocated = allocatedTimeStamps.last
         timestamps = timestamps.drop(scnCb.nb)
       }
@@ -77,7 +77,7 @@ class ScnTimestampCallQueueActor(scn: Scn, seqName: String, execRateInMs: Int,
 /**
  * Base class for call queue actors.
  */
-abstract class ScnCallQueueActor[T](scn: Scn, seqName: String, seqType: String, execRateInMs: Int,
+abstract class ScnCallQueueActor[T](scn: Scn, seqName: String, seqType: String, execRateInMs: Int, timeoutInMs: Int,
                                     callbackExecutor: Option[CallbackExecutor[T]] = None)
   extends Actor with Logging with Traced {
 
@@ -97,6 +97,11 @@ abstract class ScnCallQueueActor[T](scn: Scn, seqName: String, seqType: String, 
   }
 
   protected[scn] def execute() {
+    val currentTime = System.currentTimeMillis()
+    while(queue.hasMore && (currentTime - queue.front.get.startTime) > timeoutInMs) {
+      val callback = queue.dequeue()
+      executor.executeCallback(callback, Left(new TimeoutException("Timed out while waiting for SCN response.")))
+    }
     if (queue.count > 0) {
       scnMethod(seqName, (seq: Seq[T], optException: Option[Exception]) => {
         this ! ExecuteOnScnResponse(if(seq == null) Seq() else seq, optException)
@@ -145,7 +150,7 @@ case class Batched[T](cb: ScnCallback[T])
 case class Execute()
 
 // used to execute the Scn callback from the caller
-case class Callback[T](cb: ScnCallback[T], response: Seq[T])
+case class Callback[T](cb: ScnCallback[T], response: Either[Exception, Seq[T]])
 
 // used to execute the Scn response and dispatch to the callers
 case class ExecuteOnScnResponse[T](response: Seq[T], error: Option[Exception])
@@ -161,7 +166,7 @@ trait CallbackExecutor[T] {
    * @param cb the callback to execute
    * @param response the response associated to the callback
    */
-  def executeCallback(cb: ScnCallback[T], response: Seq[T])
+  def executeCallback(cb: ScnCallback[T], response: Either[Exception, Seq[T]])
 }
 
 /**
@@ -177,7 +182,10 @@ class DefaultCallbackExecutor[T](name: String, scn: Scn) extends Actor with Call
           scnResponseTimer.update(System.currentTimeMillis() - callback.cb.startTime, TimeUnit.MILLISECONDS)
           scn.tracer.trace(callback.cb.context) {
             try {
-              callback.cb.callback(callback.response, None)
+              callback.response match {
+                case Left(e) => callback.cb.callback(Seq(), Some(e))
+                case Right(r) => callback.cb.callback(r, None)
+              }
             }
             catch {
               case ex: Exception => {
@@ -191,7 +199,7 @@ class DefaultCallbackExecutor[T](name: String, scn: Scn) extends Actor with Call
     }
   }
 
-  def executeCallback(cb: ScnCallback[T], response: Seq[T]) {
+  def executeCallback(cb: ScnCallback[T], response: Either[Exception, Seq[T]]) {
     this ! Callback(cb, response)
   }
 }
