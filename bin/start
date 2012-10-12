@@ -1,0 +1,52 @@
+#!/bin/bash
+
+cd `dirname $0`/..
+
+# Setting up java
+JAVA_EXEC=`which java`
+if [ "$JAVA_HOME" != "" ]; then
+		JAVA_EXEC="$JAVA_HOME/bin/java"
+fi
+
+# Setting up wajam
+HOSTNAME=`uname -n` | awk '{print tolower($0)}'
+WAJAM_HOME=`pwd`
+WAJAM_LOG_DIR="$WAJAM_HOME/logs"
+WAJAM_CONSOLE_LOG="$WAJAM_LOG_DIR/console.log"
+
+# Create wajam log dir, rotate old
+mkdir -p $WAJAM_LOG_DIR
+if [ -e $WAJAM_CONSOLE_LOG ]
+then
+  mv "$WAJAM_CONSOLE_LOG" "$WAJAM_CONSOLE_LOG-`date +%F-%R-%N`"
+fi
+
+JAVA_XMS="1024M"
+JAVA_XMX="2048M"
+JAVA_XSS="256k"
+JAVA_XMN="512M"
+JAVA_JMX_PORT=9991
+
+# Load per server configuration / overrides
+if [[ -f "$WAJAM_HOME/etc/servers/$HOSTNAME.sh" ]]; then
+	. "$WAJAM_HOME/etc/servers/$HOSTNAME.sh"
+fi
+
+# Java flags
+JAVA_FLAGS="-Xms$JAVA_XMS -Xmx$JAVA_XMX -Xss$JAVA_XSS -Xmn$JAVA_XMN -Dcom.sun.management.jmxremote.port=$JAVA_JMX_PORT -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Djava.net.preferIPv4Stack=true -XX:+UseCompressedOops -Dnetworkaddress.cache.negative.ttl=0 -Dcom.sun.org.apache.xml.internal.dtm.DTMManager=com.sun.org.apache.xml.internal.dtm.ref.DTMManagerDefault -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"
+JAVA_LOGGING="-Dlog4j.configuration=file://$WAJAM_HOME/etc/log4j.properties"
+SCALA_ACTOR_THREAD_POOL_SIZE="-Dactors.corePoolSize=300"
+
+if [ -d "$WAJAM_CLASSES" ]; then
+	$JAVA_EXEC -cp $WAJAM_CLASSPATH $JAVA_FLAGS -Dlog4j.configuration=file://$WAJAM_HOME/etc/log4j.properties -Dnet.spy.log.LoggerImpl=net.spy.memcached.compat.log.Log4JLogger $* &> $WAJAM_CONSOLE_LOG
+elif [ -f $WAJAM_JAR ]; then
+	WAJAM_CLASSPATH=$WAJAM_CLASSPATH:$WAJAM_JAR
+	$JAVA_EXEC -cp $WAJAM_CLASSPATH $JAVA_FLAGS -Dlog4j.configuration=file://$WAJAM_HOME/etc/log4j.properties -Dnet.spy.log.LoggerImpl=net.spy.memcached.compat.log.Log4JLogger $* &> $WAJAM_CONSOLE_LOG
+else
+	echo "Couldn't find wajam jar nor classes. Did you run \"ant\" or \"ant jar\"?"
+	exit
+fi
+
+export JAVA_OPTS="$JAVA_FLAGS $JAVA_LOGGING $SCALA_ACTOR_THREAD_POOL_SIZE $1"
+export PATH=$JAVA_EXEC:$PATH
+$WAJAM_HOME/scn-core/target/start $* &> $WAJAM_CONSOLE_LOG
