@@ -5,8 +5,9 @@ import org.scalatest.junit.JUnitRunner
 import org.scalatest.{BeforeAndAfter, FunSuite}
 import org.scalatest.mock.MockitoSugar
 import org.mockito.Mockito._
-import org.mockito.ArgumentCaptor
+import org.mockito.{Matchers, Mockito, ArgumentCaptor}
 import scala.collection.JavaConversions._
+import com.wajam.nrv.TimeoutException
 
 /**
  * 
@@ -21,7 +22,7 @@ class TestScnSequenceCallQueueActor extends FunSuite with BeforeAndAfter with Mo
   before {
     mockScn = new MockScn
     mockCallbackExecutor = mock[CallbackExecutor[Long]]
-    sequenceActor = new ScnSequenceCallQueueActor(mockScn, "test-timestamp", 10, Some(mockCallbackExecutor))
+    sequenceActor = new ScnSequenceCallQueueActor(mockScn, "test-timestamp", 10, 10000, Some(mockCallbackExecutor))
     sequenceActor.start()
   }
 
@@ -34,7 +35,7 @@ class TestScnSequenceCallQueueActor extends FunSuite with BeforeAndAfter with Mo
 
     waitForActorToProcess
 
-    verify(mockCallbackExecutor).executeCallback(expectedCallback, expectedSequence)
+    verify(mockCallbackExecutor).executeCallback(expectedCallback, Right(expectedSequence))
   }
 
   test("assign sequence number correctly when asked for more than one timestamp") {
@@ -46,7 +47,7 @@ class TestScnSequenceCallQueueActor extends FunSuite with BeforeAndAfter with Mo
 
     waitForActorToProcess
 
-    verify(mockCallbackExecutor).executeCallback(expectedCallback, expectedSequence)
+    verify(mockCallbackExecutor).executeCallback(expectedCallback, Right(expectedSequence))
   }
 
   test("assign sequence number correctly when exception occurs") {
@@ -69,7 +70,7 @@ class TestScnSequenceCallQueueActor extends FunSuite with BeforeAndAfter with Mo
 
     waitForActorToProcess
 
-    verify(mockCallbackExecutor).executeCallback(expectedCallback, expectedSequence)
+    verify(mockCallbackExecutor).executeCallback(expectedCallback, Right(expectedSequence))
   }
 
   test("assign sequence number correctly and in order when multiple callbacks are queue") {
@@ -81,8 +82,10 @@ class TestScnSequenceCallQueueActor extends FunSuite with BeforeAndAfter with Mo
     sequenceActor.batch(expectedSecondCallback)
 
     mockScn.nextSequenceSeq = expectedSequence
-    val callbackCaptor: ArgumentCaptor[ScnCallback[Long]] = ArgumentCaptor.forClass(ScnCallback.getClass).asInstanceOf[ArgumentCaptor[ScnCallback[Long]]]
-    val sequenceCaptor: ArgumentCaptor[Seq[Long]] = ArgumentCaptor.forClass(Seq.getClass).asInstanceOf[ArgumentCaptor[Seq[Long]]]
+    val callbackCaptor: ArgumentCaptor[ScnCallback[Long]] =
+      ArgumentCaptor.forClass(ScnCallback.getClass).asInstanceOf[ArgumentCaptor[ScnCallback[Long]]]
+    val sequenceCaptor: ArgumentCaptor[Either[Exception, Seq[Long]]] =
+      ArgumentCaptor.forClass(Seq.getClass).asInstanceOf[ArgumentCaptor[Either[Exception, Seq[Long]]]]
 
     sequenceActor.execute()
 
@@ -91,7 +94,7 @@ class TestScnSequenceCallQueueActor extends FunSuite with BeforeAndAfter with Mo
     verify(mockCallbackExecutor, times(2)).executeCallback(callbackCaptor.capture(), sequenceCaptor.capture())
 
     assert(callbackCaptor.getAllValues.toList === Seq(expectedFirstCallback, expectedSecondCallback).toList)
-    assert(sequenceCaptor.getAllValues.toList === Seq(Seq(11), Seq(12)).toList)
+    assert(sequenceCaptor.getAllValues.toList === Seq(Right(Seq(11)), Right(Seq(12))).toList)
   }
 
   test("degenerate case when asking for 0 sequence number") {
@@ -100,6 +103,21 @@ class TestScnSequenceCallQueueActor extends FunSuite with BeforeAndAfter with Mo
         assert(false)
       }, 0))
     }
+  }
+
+  test("timeout old waiting callbacks") {
+    val aLongTimeAgo = 0L
+    val expectedCallback = ScnCallback[Long]((seq: Seq[Long], ex: Option[Exception]) => {}, 1, aLongTimeAgo)
+    val sequenceCaptor: ArgumentCaptor[Either[Exception, Seq[Long]]] =
+      ArgumentCaptor.forClass(Either.getClass).asInstanceOf[ArgumentCaptor[Either[Exception, Seq[Long]]]]
+
+    sequenceActor.batch(expectedCallback)
+    sequenceActor.execute()
+    waitForActorToProcess
+
+    verify(mockCallbackExecutor).executeCallback(Matchers.eq(expectedCallback), sequenceCaptor.capture())
+    assert(sequenceCaptor.getValue.isLeft)
+    assert(sequenceCaptor.getValue.left.get.isInstanceOf[TimeoutException])
   }
 
   private def waitForActorToProcess {
