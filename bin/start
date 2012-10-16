@@ -37,16 +37,6 @@ JAVA_FLAGS="-Xms$JAVA_XMS -Xmx$JAVA_XMX -Xss$JAVA_XSS -Xmn$JAVA_XMN -Dcom.sun.ma
 JAVA_LOGGING="-Dlog4j.configuration=file://$WAJAM_HOME/etc/log4j.properties"
 SCALA_ACTOR_THREAD_POOL_SIZE="-Dactors.corePoolSize=300"
 
-if [ -d "$WAJAM_CLASSES" ]; then
-	$JAVA_EXEC -cp $WAJAM_CLASSPATH $JAVA_FLAGS -Dlog4j.configuration=file://$WAJAM_HOME/etc/log4j.properties -Dnet.spy.log.LoggerImpl=net.spy.memcached.compat.log.Log4JLogger $* &> $WAJAM_CONSOLE_LOG
-elif [ -f $WAJAM_JAR ]; then
-	WAJAM_CLASSPATH=$WAJAM_CLASSPATH:$WAJAM_JAR
-	$JAVA_EXEC -cp $WAJAM_CLASSPATH $JAVA_FLAGS -Dlog4j.configuration=file://$WAJAM_HOME/etc/log4j.properties -Dnet.spy.log.LoggerImpl=net.spy.memcached.compat.log.Log4JLogger $* &> $WAJAM_CONSOLE_LOG
-else
-	echo "Couldn't find wajam jar nor classes. Did you run \"ant\" or \"ant jar\"?"
-	exit
-fi
-
 export JAVA_OPTS="$JAVA_FLAGS $JAVA_LOGGING $SCALA_ACTOR_THREAD_POOL_SIZE $1"
 export PATH=$JAVA_EXEC:$PATH
 $WAJAM_HOME/scn-core/target/start $* &> $WAJAM_CONSOLE_LOG
