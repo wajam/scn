@@ -34,7 +34,7 @@ class ScnClient(scn: Scn, config: ScnClientConfig = ScnClientConfig()) extends I
    */
   def fetchTimestamps(name: String, cb: (Seq[Timestamp], Option[Exception]) => Unit, nb: Int) {
     val timestampActor = timestampStackActors.getOrElse(name, {
-      val actor = new ScnTimestampCallQueueActor(scn, name, config.executionRateInMs)
+      val actor = new ScnTimestampCallQueueActor(scn, name, config.executionRateInMs, config.timeoutInMs)
       actor.start()
       Option(timestampStackActors.putIfAbsent(name, actor)).getOrElse(actor)
     })
@@ -52,7 +52,7 @@ class ScnClient(scn: Scn, config: ScnClientConfig = ScnClientConfig()) extends I
    */
   def fetchSequenceIds(name: String, cb: (Seq[Long], Option[Exception]) => Unit, nb: Int) {
     val sequenceActor = sequenceStackActors.getOrElse(name, {
-      val actor = new ScnSequenceCallQueueActor(scn, name, config.executionRateInMs)
+      val actor = new ScnSequenceCallQueueActor(scn, name, config.executionRateInMs, config.timeoutInMs)
       actor.start()
       Option(sequenceStackActors.putIfAbsent(name, actor)).getOrElse(actor)
     })
