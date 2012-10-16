@@ -17,10 +17,6 @@ class ScnConfiguration(config: Configuration) {
     config.getString("scn.listen.address", "0.0.0.0")
   }
 
-  def getHttpListenPort: Int = {
-    config.getInt("scn.http.listen.port")
-  }
-
   def getNrvListenPort: Int = {
     config.getInt("scn.nrv.listen.port")
   }

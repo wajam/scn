@@ -42,8 +42,6 @@ class ScnServer(config: ScnConfiguration) {
       new Scn("scn", scnConfig, StorageType.ZOOKEEPER, Some(new ZookeeperClient(config.getNrvZookeeperServers)))
   }
 
-  val protocol = new HttpProtocol("scn", cluster.localNode, cluster)
-  cluster.registerProtocol(protocol)
   cluster.registerService(scn)
 
   val scnMembersString = config.getScnClusterMembers
