@@ -24,13 +24,13 @@ class ScnServer(config: ScnConfiguration) {
 
   // Tracing
   val traceRecorder = if (config.isTraceEnabled) {
-    new ScribeTraceRecorder(config.getTraceScribeHost, config.getTraceScribePort)
+    new ScribeTraceRecorder(config.getTraceScribeHost, config.getTraceScribePort, config.getTraceScribeSamplingRate)
   } else {
     NullTraceRecorder
   }
 
   val manager = new StaticClusterManager
-  val node = new Node("0.0.0.0", Map("nrv" -> config.getNrvListenPort, "scn" -> config.getHttpListenPort))
+  val node = new Node("0.0.0.0", Map("nrv" -> config.getNrvListenPort))
   val cluster = new Cluster(node, manager, tracer = new Tracer(traceRecorder))
 
   val scnStorage = config.getScnSequenceStorage

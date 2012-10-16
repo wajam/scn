@@ -72,6 +72,10 @@ class ScnConfiguration(config: Configuration) {
   def getTraceScribePort: Int = {
     config.getInt("scn.trace.scribe.port", 1463)
   }
+
+  def getTraceScribeSamplingRate: Int = {
+    config.getInt("scn.trace.scribe.sampling_rate", 1000)
+  }
 }
 
 object ScnConfiguration extends Logging {
