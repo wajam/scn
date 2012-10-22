@@ -1,36 +1,51 @@
 package com.wajam.scn.storage
 
 import com.wajam.nrv.cluster.zookeeper.ZookeeperClient
+import com.wajam.nrv.cluster.zookeeper.ZookeeperClient._
 import com.wajam.scn.SequenceRange
 
 /**
  * Sequence storage that stores sequences in Zookeeper
  */
-class ZookeeperSequenceStorage(zkClient: ZookeeperClient, name: String, private val saveAheadSize: Int) extends ScnStorage[Long] {
-  zkClient.ensureExists("/scn", "".getBytes)
-  zkClient.ensureExists("/scn/sequence", "".getBytes)
-  zkClient.ensureExists("/scn/sequence/%s".format(name), "0".getBytes)
+class ZookeeperSequenceStorage(zkClient: ZookeeperClient, name: String, saveAheadSize: Int, seed: Long = 1)
+  extends ScnStorage[Long] {
+  zkClient.ensureExists("/scn", "")
+  zkClient.ensureExists("/scn/sequence", "")
+  zkClient.ensureExists("/scn/sequence/%s".format(name), seed)
 
-  private var lastSeq = SequenceRange(0, 1)
-
-  def head: Long = lastSeq.from
+  private var availableSeq = SequenceRange(seed, seed)
 
   /**
    * Get next sequence boundaries for given count.
    * WARNING: Calls to this function must be synchronized or single threaded
-   * sbt
+   *
    * @param count Number of numbers asked
    * @return Inclusive from and to sequence
    */
   def next(count: Int): List[Long] = {
-    val batchSize = math.max(count, saveAheadSize)
-
-    if (lastSeq.length < count) {
-      lastSeq = SequenceRange(lastSeq.to, zkClient.incrementCounter("/scn/sequence/%s".format(name), batchSize, 1))
+    if (availableSeq.length >= count) {
+      createSequenceFromLocalAvailableSeq(count)
+    } else {
+      val part1 = createSequenceFromLocalAvailableSeq(availableSeq.length.toInt)
+      val countToFetchFromZookeeper = count - part1.length
+      val batchSize = math.max(countToFetchFromZookeeper, saveAheadSize)
+      var lastReservedId = zkClient.incrementCounter("/scn/sequence/%s".format(name), batchSize, seed)
+      var from = lastReservedId - batchSize
+      if(seed > from) {
+        //reseed the sequence
+        zkClient.incrementCounter("/scn/sequence/%s".format(name), seed - lastReservedId , seed)
+        lastReservedId = zkClient.incrementCounter("/scn/sequence/%s".format(name), batchSize, seed)
+        from = lastReservedId - batchSize
+      }
+      val to = from + countToFetchFromZookeeper
+      availableSeq = SequenceRange(to, lastReservedId)
+      part1 ::: List.range(from, to)
     }
-
-    lastSeq = SequenceRange(lastSeq.from + count, lastSeq.to)
-    List.range(lastSeq.from - count, lastSeq.from)
   }
 
+  private def createSequenceFromLocalAvailableSeq(count: Int): List[Long] = {
+    val (from, to) = (availableSeq.from, availableSeq.from + count)
+    availableSeq = SequenceRange(to, availableSeq.to)
+    List.range(from, to)
+  }
 }
