@@ -29,18 +29,21 @@ class ZookeeperSequenceStorage(zkClient: ZookeeperClient, name: String, saveAhea
       val part1 = createSequenceFromLocalAvailableSeq(availableSeq.length.toInt)
       val countToFetchFromZookeeper = count - part1.length
       val batchSize = math.max(countToFetchFromZookeeper, saveAheadSize)
-      var lastReservedId = zkClient.incrementCounter("/scn/sequence/%s".format(name), batchSize, seed)
+      var lastReservedId = incrementZookeeperSequence(batchSize)
       var from = lastReservedId - batchSize
       if(seed > from) {
         //reseed the sequence
-        zkClient.incrementCounter("/scn/sequence/%s".format(name), seed - lastReservedId , seed)
-        lastReservedId = zkClient.incrementCounter("/scn/sequence/%s".format(name), batchSize, seed)
+        lastReservedId = incrementZookeeperSequence(seed - lastReservedId + batchSize)
         from = lastReservedId - batchSize
       }
       val to = from + countToFetchFromZookeeper
       availableSeq = SequenceRange(to, lastReservedId)
       part1 ::: List.range(from, to)
     }
+  }
+
+  private def incrementZookeeperSequence(batchSize: Long): Long = {
+    zkClient.incrementCounter("/scn/sequence/%s".format(name), batchSize, seed)
   }
 
   private def createSequenceFromLocalAvailableSeq(count: Int): List[Long] = {
