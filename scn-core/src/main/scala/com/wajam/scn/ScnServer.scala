@@ -2,7 +2,6 @@ package com.wajam.scn
 
 import com.wajam.nrv.cluster.zookeeper.ZookeeperClient
 import com.wajam.nrv.cluster.{StaticClusterManager, Node, Cluster}
-import com.wajam.nrv.protocol.HttpProtocol
 import com.wajam.scn.storage.StorageType
 import java.net.URL
 import org.apache.log4j.PropertyConfigurator
@@ -31,7 +30,7 @@ class ScnServer(config: ScnConfiguration) {
 
   val manager = new StaticClusterManager
   val node = new Node("0.0.0.0", Map("nrv" -> config.getNrvListenPort))
-  val cluster = new Cluster(node, manager, tracer = new Tracer(traceRecorder))
+  val cluster = new Cluster(node, manager, defaultTracer = new Tracer(traceRecorder))
 
   val scnStorage = config.getScnSequenceStorage
   val scnConfig = ScnConfig(config.getScnTimestampSaveAheadInMs, config.getScnSequenceSaveAheadSize)
