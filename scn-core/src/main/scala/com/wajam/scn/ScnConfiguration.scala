@@ -3,6 +3,7 @@ package com.wajam.scn
 import org.apache.commons.configuration.tree.OverrideCombiner
 import org.apache.commons.configuration.{Configuration, PropertiesConfiguration, CombinedConfiguration}
 import com.wajam.nrv.Logging
+import scala.collection.JavaConversions._
 
 /**
  * 
@@ -35,6 +36,12 @@ class ScnConfiguration(config: Configuration) {
 
   def getScnSequenceSaveAheadSize: Int = {
     config.getInt("scn.sequence.saveahead.unit", 100)
+  }
+
+  def getScnSequenceSeeds: Map[String, Long] = {
+    val scnSequenceSeedCfg = config.subset("scn.sequence.seed")
+    val keys: Seq[String] = scnSequenceSeedCfg.getKeys.asInstanceOf[java.util.Iterator[String]].toSeq
+    keys.map(key => (key, scnSequenceSeedCfg.getLong(key))).toMap
   }
 
   def getScnClusterMembers: Seq[String] = {
