@@ -4,7 +4,6 @@ import org.apache.commons.configuration.tree.OverrideCombiner
 import org.apache.commons.configuration.{Configuration, PropertiesConfiguration, CombinedConfiguration}
 import com.wajam.nrv.Logging
 import scala.collection.JavaConversions._
-import scala.collection
 
 /**
  * 
@@ -39,12 +38,10 @@ class ScnConfiguration(config: Configuration) {
     config.getInt("scn.sequence.saveahead.unit", 100)
   }
 
-  def getScnSequenceSeed: Map[String, Long] = {
-    val map = new collection.mutable.HashMap[String, Long]()
-    val scnSequenceSeedCfg = config.subset("scn.sequence.seed.")
+  def getScnSequenceSeeds: Map[String, Long] = {
+    val scnSequenceSeedCfg = config.subset("scn.sequence.seed")
     val keys: Seq[String] = scnSequenceSeedCfg.getKeys.asInstanceOf[java.util.Iterator[String]].toSeq
-    keys.foreach(key => map.put(key, scnSequenceSeedCfg.getLong(key)))
-    map.toMap
+    keys.map(key => (key, scnSequenceSeedCfg.getLong(key))).toMap
   }
 
   def getScnClusterMembers: Seq[String] = {

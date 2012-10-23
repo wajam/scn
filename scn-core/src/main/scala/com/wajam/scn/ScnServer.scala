@@ -34,7 +34,7 @@ class ScnServer(config: ScnConfiguration) {
   val cluster = new Cluster(node, manager, tracer = new Tracer(traceRecorder))
 
   val scnStorage = config.getScnSequenceStorage
-  val scnConfig = ScnConfig(config.getScnTimestampSaveAheadInMs, config.getScnSequenceSaveAheadSize, config.getScnSequenceSeed)
+  val scnConfig = ScnConfig(config.getScnTimestampSaveAheadInMs, config.getScnSequenceSaveAheadSize, config.getScnSequenceSeeds)
   val scn = scnStorage match {
     case "memory" =>
       new Scn("scn", scnConfig, StorageType.MEMORY)
