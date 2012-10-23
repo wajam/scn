@@ -84,7 +84,8 @@ class Scn(serviceName: String = "scn",
       val sequenceActor = sequenceActors.getOrElse(name, {
         val actor = new SequenceActor[Long](storageType match {
           case StorageType.ZOOKEEPER =>
-            new ZookeeperSequenceStorage(zookeeperClient.get, name, config.sequenceSaveAheadSize)
+            new ZookeeperSequenceStorage(zookeeperClient.get, name,
+              config.sequenceSaveAheadSize, config.sequenceSeeds.getOrElse(name, 1))
           case StorageType.MEMORY =>
             new InMemorySequenceStorage()
         })

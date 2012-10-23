@@ -29,7 +29,7 @@ class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
   }
 
   test("counter head position in zookeeper") {
-    val head = storage.head
+    val head = storage.saveAheadTimestamp
 
     storage.next(1)
     // Wait 2 times to Save ahead time to make sure a new head is written
