@@ -51,7 +51,7 @@ class ScnServer(config: ScnConfiguration) {
     GraphiteReporter.enable(
       config.getGraphiteUpdatePeriodInSec, TimeUnit.SECONDS,
       config.getGraphiteServerAddress, config.getGraphiteServerPort,
-      config.getEnvironment + ".scn." + node.uniqueKey)
+      config.getEnvironment + ".scn." + node.uniqueKey.replace(".", "-"))
   }
 
 
