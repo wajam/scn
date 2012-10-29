@@ -18,7 +18,7 @@ class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String, private
   private var lastSeq = SequenceRange(0, 1)
   private var savedAhead = zkClient.getLong("/scn/timestamp/%s".format(name))
 
-  def head: Timestamp = ScnTimestamp(savedAhead, 0)
+  protected[storage] def saveAheadTimestamp: Timestamp = ScnTimestamp(savedAhead, 0)
 
   /**
    * Get next sequence boundaries for given count.
@@ -35,7 +35,7 @@ class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String, private
       throw new Exception("Drifting late clock detected.")
     }
 
-    if (ScnTimestamp(reqTime, 0) >= head) {
+    if (ScnTimestamp(reqTime, 0) >= saveAheadTimestamp) {
       // Save ahead
       savedAhead = reqTime + saveAheadInMs
       zkClient.set("/scn/timestamp/%s".format(name), savedAhead.toString.getBytes)
