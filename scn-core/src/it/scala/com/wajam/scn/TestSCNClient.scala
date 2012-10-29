@@ -32,7 +32,7 @@ with BeforeAndAfterAll with BeforeAndAfterEach {
     val manager = new StaticClusterManager
     cluster = new Cluster(new Node("0.0.0.0", Map("nrv" -> 49999, "scn" -> 50000)), manager)
 
-    val protocol = new NrvProtocol(cluster.localNode, cluster)
+    val protocol = new NrvProtocol(cluster.localNode)
     cluster.registerProtocol(protocol)
 
     scn = new Scn("scn", Some(protocol), ScnConfig(), StorageType.MEMORY)

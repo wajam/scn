@@ -5,7 +5,7 @@ import org.apache.commons.configuration.{Configuration, PropertiesConfiguration,
 import com.wajam.nrv.Logging
 
 /**
- * 
+ *
  */
 class ScnConfiguration(config: Configuration) {
 
@@ -19,6 +19,10 @@ class ScnConfiguration(config: Configuration) {
 
   def getNrvListenPort: Int = {
     config.getInt("scn.nrv.listen.port")
+  }
+
+  def getNrvClusterManager: String = {
+    config.getString("scn.nrv.cluster_manager")
   }
 
   def getNrvZookeeperServers: String = {

@@ -1,6 +1,6 @@
 package com.wajam.scn
 
-import com.wajam.nrv.cluster.zookeeper.ZookeeperClient
+import com.wajam.nrv.cluster.zookeeper.{ZookeeperClusterManager, ZookeeperClient}
 import com.wajam.nrv.cluster.{StaticClusterManager, Node, Cluster}
 import com.wajam.scn.storage.StorageType
 import java.net.URL
@@ -9,6 +9,7 @@ import com.wajam.nrvext.scribe.ScribeTraceRecorder
 import com.wajam.nrv.tracing.{Tracer, NullTraceRecorder}
 import com.yammer.metrics.reporting.GraphiteReporter
 import java.util.concurrent.TimeUnit
+import com.wajam.nrv.Logging
 
 /**
  * Description
@@ -19,7 +20,7 @@ import java.util.concurrent.TimeUnit
  *
  */
 
-class ScnServer(config: ScnConfiguration) {
+class ScnServer(config: ScnConfiguration) extends Logging {
 
   // Tracing
   val traceRecorder = if (config.isTraceEnabled) {
@@ -28,23 +29,40 @@ class ScnServer(config: ScnConfiguration) {
     NullTraceRecorder
   }
 
-  val manager = new StaticClusterManager
-  val node = new Node("0.0.0.0", Map("nrv" -> config.getNrvListenPort))
-  val cluster = new Cluster(node, manager, defaultTracer = new Tracer(traceRecorder))
+  // Zookeeper instance (lazy loaded since unit tests won't use it)
+  lazy val zookeeper = new ZookeeperClient(config.getNrvZookeeperServers)
 
+  // Create local node
+  val ports = Map("nrv" -> config.getNrvListenPort)
+  val node = config.getListenAddress match {
+    case "0.0.0.0" => Node.createLocal(ports)
+    case specific => new Node(specific, ports)
+  }
+  log.info("Local node is {}", node)
+
+  // Create cluster
+  val clusterManager = config.getNrvClusterManager match {
+    case "static" => new StaticClusterManager
+    case "zookeeper" => new ZookeeperClusterManager(zookeeper)
+  }
+  val cluster = new Cluster(node, clusterManager, defaultTracer = new Tracer(traceRecorder))
+
+  // Sequence number generator
   val scnStorage = config.getScnSequenceStorage
   val scnConfig = ScnConfig(config.getScnTimestampSaveAheadInMs, config.getScnSequenceSaveAheadSize)
   val scn = scnStorage match {
     case "memory" =>
       new Scn("scn", scnConfig, StorageType.MEMORY)
     case "zookeeper" =>
-      new Scn("scn", scnConfig, StorageType.ZOOKEEPER, Some(new ZookeeperClient(config.getNrvZookeeperServers)))
+      new Scn("scn", scnConfig, StorageType.ZOOKEEPER, Some(zookeeper))
   }
-
   cluster.registerService(scn)
 
   val scnMembersString = config.getScnClusterMembers
-  manager.addMembers(scn, config.getScnClusterMembers)
+  clusterManager match {
+    case static: StaticClusterManager => static.addMembers(scn, config.getScnClusterMembers)
+    case _ =>
+  }
 
   // Metrics binding to Graphite
   if (config.isGraphiteEnabled) {
