@@ -10,12 +10,6 @@ class InMemorySequenceStorage extends ScnStorage[Long] {
   private var lastSeq = SequenceRange(0, 1)
 
   /**
-   * Get Head of the sequence
-   * @return Head of the sequence (Next element to be returned)
-   */
-  def head: Long = lastSeq.from
-
-  /**
    * Get next sequence boundaries for given count.
    * WARNING: Calls to this function must be synchronized or single threaded
    *

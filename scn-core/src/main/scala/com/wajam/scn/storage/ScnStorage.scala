@@ -5,13 +5,6 @@ package com.wajam.scn.storage
  */
 trait ScnStorage[T] {
 
-
-  /**
-   * Get Head of the sequence
-   * @return Head of the sequence (Next element to be returned)
-   */
-  def head: T
-
   /**
    * Get next sequence for given count.
    * WARNING: Calls to this function must be synchronized or single threaded

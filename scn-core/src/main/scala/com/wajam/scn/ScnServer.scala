@@ -50,7 +50,7 @@ class ScnServer(config: ScnConfiguration) extends Logging {
 
   // Sequence number generator
   val scnStorage = config.getScnSequenceStorage
-  val scnConfig = ScnConfig(config.getScnTimestampSaveAheadInMs, config.getScnSequenceSaveAheadSize)
+  val scnConfig = ScnConfig(config.getScnTimestampSaveAheadInMs, config.getScnSequenceSaveAheadSize, config.getScnSequenceSeeds)
   val scn = scnStorage match {
     case "memory" =>
       new Scn("scn", scnConfig, StorageType.MEMORY)

@@ -11,12 +11,6 @@ class InMemoryTimestampStorage extends ScnStorage[Timestamp] with CurrentTime {
   private var lastSeq = SequenceRange(0, 1)
 
   /**
-   * Get Head of the sequence
-   * @return Head of the sequence (Batched element to be returned)
-   */
-  def head = ScnTimestamp(currentTime, lastSeq.from)
-
-  /**
    * Get next sequence for given count.
    * WARNING: Calls to this function must be synchronized or single threaded
    *
