@@ -1,6 +1,6 @@
 package com.wajam.scn
 
-import com.wajam.nrv.service.{Resolver, Action, Service}
+import com.wajam.nrv.service.{ActionSupportOptions, Resolver, Action, Service}
 import storage._
 
 import java.util.concurrent._
@@ -23,7 +23,8 @@ class Scn(serviceName: String = "scn",
           config: ScnConfig,
           storageType: StorageType.Value = StorageType.ZOOKEEPER,
           zookeeperClient: Option[ZookeeperClient] = None)
-  extends Service(serviceName, protocol, Some(new Resolver(tokenExtractor = Resolver.TOKEN_HASH_PARAM("name"))))
+  extends Service(serviceName, new ActionSupportOptions(protocol = protocol,
+    resolver = Some(new Resolver(tokenExtractor = Resolver.TOKEN_HASH_PARAM("name")))))
   with Logging with Instrumented {
 
   def this(serviceName: String,
