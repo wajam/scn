@@ -16,9 +16,7 @@ class TestZookeeperSequenceStorage extends FunSuite with BeforeAndAfter {
 
   before {
     zookeeperClient = new ZookeeperClient("127.0.0.1")
-    if (zookeeperClient.ensureExists("/scn/sequence/%s".format(NAME), SEED)) {
-      zookeeperClient.delete("/scn/sequence/%s".format(NAME))
-    }
+    zookeeperClient.delete("/scn/sequence/%s".format(NAME))
     storage = new ZookeeperSequenceStorage(zookeeperClient, NAME, BATCH_SIZE, SEED)
   }
 
