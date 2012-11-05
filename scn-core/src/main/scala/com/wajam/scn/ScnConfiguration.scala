@@ -38,6 +38,10 @@ class ScnConfiguration(config: Configuration) {
     config.getInt("scn.timestamp.saveahead.ms", 5000)
   }
 
+  def getScnTimestampSaveAheadRenewalInMs: Int = {
+    config.getInt("edge.scn.timestamp.renewal.ms", 1000)
+  }
+
   def getScnSequenceSaveAheadSize: Int = {
     config.getInt("scn.sequence.saveahead.unit", 100)
   }

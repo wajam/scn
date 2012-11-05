@@ -4,7 +4,7 @@ import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import org.mockito.Matchers._
 import org.mockito.Mockito._
-import org.scalatest.{FunSuite, BeforeAndAfterEach, BeforeAndAfterAll}
+import org.scalatest.{BeforeAndAfter, FunSuite}
 import com.wajam.nrv.cluster.{Node, Cluster, StaticClusterManager}
 import com.wajam.nrv.protocol.NrvProtocol
 import storage.StorageType
@@ -21,16 +21,15 @@ import collection.mutable
  *
  */
 @RunWith(classOf[JUnitRunner])
-class TestSCNClient extends FunSuite with MockitoSugar
-with BeforeAndAfterAll with BeforeAndAfterEach {
+class TestSCNClient extends FunSuite with MockitoSugar with BeforeAndAfter {
 
   var scn: Scn = null
   var scnClient: ScnClient = null
   var cluster: Cluster = null
 
-  override def beforeEach() {
+  before {
     val manager = new StaticClusterManager
-    cluster = new Cluster(new Node("0.0.0.0", Map("nrv" -> 49999, "scn" -> 50000)), manager)
+    cluster = new Cluster(Node.createLocal(Map("nrv" -> 49999, "scn" -> 50000)), manager)
 
     val protocol = new NrvProtocol(cluster.localNode)
     cluster.registerProtocol(protocol)
@@ -44,7 +43,7 @@ with BeforeAndAfterAll with BeforeAndAfterEach {
     scnClient = new ScnClient(scn)
   }
 
-  override def afterEach() {
+  after {
     cluster.stop()
   }
 

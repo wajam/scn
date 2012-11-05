@@ -50,7 +50,8 @@ class Scn(serviceName: String = "scn",
       val timestampActor = timestampActors.getOrElse(name, {
         val actor = new SequenceActor[Timestamp](storageType match {
           case StorageType.ZOOKEEPER =>
-            new ZookeeperTimestampStorage(zookeeperClient.get, name, config.timestampSaveAheadMs)
+            new ZookeeperTimestampStorage(zookeeperClient.get,
+              name, config.timestampSaveAheadMs, config.timestampSaveAheadRenewalMs)
           case StorageType.MEMORY =>
             new InMemoryTimestampStorage()
         })
