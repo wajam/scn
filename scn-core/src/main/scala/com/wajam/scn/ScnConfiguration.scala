@@ -6,7 +6,7 @@ import com.wajam.nrv.Logging
 import scala.collection.JavaConversions._
 
 /**
- * 
+ *
  */
 class ScnConfiguration(config: Configuration) {
 
@@ -22,6 +22,10 @@ class ScnConfiguration(config: Configuration) {
     config.getInt("scn.nrv.listen.port")
   }
 
+  def getNrvClusterManager: String = {
+    config.getString("scn.nrv.cluster_manager")
+  }
+
   def getNrvZookeeperServers: String = {
     config.getString("scn.nrv.zookeeper.servers")
   }
@@ -32,6 +36,10 @@ class ScnConfiguration(config: Configuration) {
 
   def getScnTimestampSaveAheadInMs: Int = {
     config.getInt("scn.timestamp.saveahead.ms", 5000)
+  }
+
+  def getScnTimestampSaveAheadRenewalInMs: Int = {
+    config.getInt("edge.scn.timestamp.renewal.ms", 1000)
   }
 
   def getScnSequenceSaveAheadSize: Int = {

@@ -1,22 +1,28 @@
 package com.wajam.scn.storage
 
 import com.wajam.nrv.cluster.zookeeper.ZookeeperClient
+import com.wajam.nrv.cluster.zookeeper.ZookeeperClient._
 import com.wajam.scn.{SequenceRange, Timestamp}
 import com.wajam.nrv.Logging
+import com.wajam.nrv.utils.CurrentTime
+import org.apache.zookeeper.data.Stat
+import org.apache.zookeeper.KeeperException
 
 /**
  * Sequence storage that stores timestamps in Zookeeper
  */
-class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String, private[storage] val saveAheadInMs: Int)
+class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String, private[storage] val saveAheadInMs: Int,
+                                saveAheadRenewalInMs: Int)
   extends ScnStorage[Timestamp] with CurrentTime with Logging {
 
-  zkClient.ensureExists("/scn", "".getBytes)
-  zkClient.ensureExists("/scn/timestamp", "".getBytes)
-  zkClient.ensureExists("/scn/timestamp/%s".format(name), "0".getBytes)
+  zkClient.ensureExists("/scn", "")
+  zkClient.ensureExists("/scn/timestamp", "")
+  zkClient.ensureExists("/scn/timestamp/%s".format(name), timestamp2string(-1L))
 
   private var lastTime = -1L
   private var lastSeq = SequenceRange(0, 1)
-  private var savedAhead = zkClient.getLong("/scn/timestamp/%s".format(name))
+  private var lastStat = new Stat
+  private var savedAhead = string2timestamp(zkClient.getString("/scn/timestamp/%s".format(name), stat = Some(lastStat)))
 
   protected[storage] def saveAheadTimestamp: Timestamp = ScnTimestamp(savedAhead, 0)
 
@@ -35,10 +41,25 @@ class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String, private
       throw new Exception("Drifting late clock detected.")
     }
 
-    if (ScnTimestamp(reqTime, 0) >= saveAheadTimestamp) {
-      // Save ahead
-      savedAhead = reqTime + saveAheadInMs
-      zkClient.set("/scn/timestamp/%s".format(name), savedAhead.toString.getBytes)
+    // Save ahead update
+    if (ScnTimestamp(reqTime, 0) >= ScnTimestamp(savedAhead - saveAheadRenewalInMs, 0) ) {
+      try {
+        // Try to persist save ahead
+        zkClient.set("/scn/timestamp/%s".format(name), timestamp2string(reqTime + saveAheadInMs), lastStat.getVersion)
+      } catch {
+        // Our save ahead version is out of date! Another instance is generating the timestamps!
+        case e: KeeperException.BadVersionException =>
+          // Reset our last known serve time as this instance We cannot generate new timetsamps until save ahead is
+          // expired.
+          lastTime = -1L
+
+          // Avoid duplicate ID with concurent generation
+          throw new Exception("Concurent timestamps generation detected.", e)
+      }
+      finally {
+        // Need to get the latest save ahead value and version no matter if save ahead persistence was successful or not
+        savedAhead = string2timestamp(zkClient.getString("/scn/timestamp/%s".format(name), stat = Some(lastStat)))
+      }
     }
 
     while (lastSeq.length != count) {
