@@ -12,11 +12,12 @@ class TestZookeeperSequenceStorage extends FunSuite with BeforeAndAfter {
   val SEED = 1
   val NAME = "it_seq_test"
   val BATCH_SIZE = 100
+  val zkServerAddress = "127.0.0.1/tests"
   var zkClient: ZookeeperClient = null
   var storage: ZookeeperSequenceStorage = null
 
   before {
-    zkClient = new ZookeeperClient("127.0.0.1")
+    zkClient = new ZookeeperClient(zkServerAddress)
     try {
       zkClient.delete("/scn/sequence/%s".format(NAME))
     } catch {
@@ -37,7 +38,7 @@ class TestZookeeperSequenceStorage extends FunSuite with BeforeAndAfter {
 
     val expectedInitValue = 10010
     storage = new ZookeeperSequenceStorage(
-      new ZookeeperClient("127.0.0.1"), "it_seq_test", 100, expectedInitValue)
+      new ZookeeperClient(zkServerAddress), "it_seq_test", 100, expectedInitValue)
 
     assert(expectedInitValue === storage.next(1)(0))
   }
@@ -72,7 +73,7 @@ class TestZookeeperSequenceStorage extends FunSuite with BeforeAndAfter {
     val seed = 1000
 
     storage = new ZookeeperSequenceStorage(
-      new ZookeeperClient("127.0.0.1"), "it_seq_test", 100, seed)
+      new ZookeeperClient(zkServerAddress), "it_seq_test", 100, seed)
 
     val ids = storage.next(1)
 
@@ -101,7 +102,7 @@ class TestZookeeperSequenceStorage extends FunSuite with BeforeAndAfter {
   test("concurent increment should never returns overlaping sequence") {
 
     // Setup storages
-    val zkCLients = 1.to(5).map(_ => new ZookeeperClient("127.0.0.1")).toList
+    val zkCLients = 1.to(5).map(_ => new ZookeeperClient(zkServerAddress)).toList
     val storages = zkCLients.map(new ZookeeperSequenceStorage(_, NAME, 50, SEED)).toList
 
     // Request sequences concurently (one thread per storage)

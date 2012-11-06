@@ -10,11 +10,12 @@ import com.wajam.nrv.utils.{CurrentTime, ControlableCurrentTime}
 @RunWith(classOf[JUnitRunner])
 class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
   val TS_NAME = "it_ts_tests"
+  val zkServerAddress = "127.0.0.1/tests"
   var zkClient: ZookeeperClient = null
   var storage: ZookeeperTimestampStorage = null
 
   before {
-    zkClient = new ZookeeperClient("127.0.0.1")
+    zkClient = new ZookeeperClient(zkServerAddress)
     try {
       zkClient.delete("/scn/timestamp/%s".format(TS_NAME))
     } catch {
@@ -88,10 +89,10 @@ class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
     val renewalMillis = 1000
     val initialTime = new CurrentTime{}.currentTime
 
-    val zk1 = new ZookeeperClient("127.0.0.1")
+    val zk1 = new ZookeeperClient(zkServerAddress)
     val storage1 = new ZookeeperTimestampStorage(zk1, TS_NAME, saveAheadMillis, renewalMillis) with ControlableCurrentTime
 
-    val zk2 = new ZookeeperClient("127.0.0.1")
+    val zk2 = new ZookeeperClient(zkServerAddress)
     val storage2 = new ZookeeperTimestampStorage(zk2, TS_NAME, saveAheadMillis, renewalMillis) with ControlableCurrentTime
 
     // First instance initial timestamp
