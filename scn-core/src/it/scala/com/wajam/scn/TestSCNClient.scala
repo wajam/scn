@@ -55,7 +55,7 @@ class TestSCNClient extends FunSuite with MockitoSugar with BeforeAndAfter {
       latch.countDown()
     }, 1)
 
-    latch.await(500, TimeUnit.MILLISECONDS)
+    latch.await(2, TimeUnit.SECONDS)
     assert(res.length == 1)
   }
 
