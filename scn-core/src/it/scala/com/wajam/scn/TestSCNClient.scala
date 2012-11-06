@@ -5,7 +5,7 @@ import org.scalatest.junit.JUnitRunner
 import org.mockito.Matchers._
 import org.mockito.Mockito._
 import org.scalatest.{BeforeAndAfter, FunSuite}
-import com.wajam.nrv.cluster.{Node, Cluster, StaticClusterManager}
+import com.wajam.nrv.cluster.{LocalNode, Cluster, StaticClusterManager}
 import com.wajam.nrv.protocol.NrvProtocol
 import storage.StorageType
 import java.util.concurrent.{TimeUnit, CountDownLatch}
@@ -29,7 +29,7 @@ class TestSCNClient extends FunSuite with MockitoSugar with BeforeAndAfter {
 
   before {
     val manager = new StaticClusterManager
-    cluster = new Cluster(Node.createLocal(Map("nrv" -> 49999, "scn" -> 50000)), manager)
+    cluster = new Cluster(new LocalNode(Map("nrv" -> 49999, "scn" -> 50000)), manager)
 
     val protocol = new NrvProtocol(cluster.localNode)
     cluster.registerProtocol(protocol)

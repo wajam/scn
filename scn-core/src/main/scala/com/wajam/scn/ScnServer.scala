@@ -1,7 +1,7 @@
 package com.wajam.scn
 
 import com.wajam.nrv.cluster.zookeeper.{ZookeeperClusterManager, ZookeeperClient}
-import com.wajam.nrv.cluster.{StaticClusterManager, Node, Cluster}
+import com.wajam.nrv.cluster.{LocalNode, StaticClusterManager, Cluster}
 import com.wajam.scn.storage.StorageType
 import java.net.URL
 import org.apache.log4j.PropertyConfigurator
@@ -35,10 +35,7 @@ class ScnServer(config: ScnConfiguration) extends Logging {
 
   // Create local node
   val ports = Map("nrv" -> config.getNrvListenPort)
-  val node = config.getListenAddress match {
-    case "0.0.0.0" => Node.createLocal(ports)
-    case specific => new Node(specific, ports)
-  }
+  val node = new LocalNode(config.getListenAddress, ports)
   log.info("Local node is {}", node)
 
   // Create cluster
