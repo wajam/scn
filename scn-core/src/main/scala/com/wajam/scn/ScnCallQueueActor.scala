@@ -85,7 +85,7 @@ abstract class ScnCallQueueActor[T](scn: Scn, seqName: String, seqType: String, 
 
   protected val executor: CallbackExecutor[T] =
     callbackExecutor.getOrElse(
-      new DefaultCallbackExecutor[T](seqType+"-"+seqName, scn).start().asInstanceOf[CallbackExecutor[T]])
+      new DefaultCallbackExecutor[T](seqType + "-" + seqName, scn).start().asInstanceOf[CallbackExecutor[T]])
 
   protected val queue: CountedScnCallQueue[T] = CountedScnCallQueue[T](new mutable.Queue[ScnCallback[T]]())
 
@@ -98,13 +98,13 @@ abstract class ScnCallQueueActor[T](scn: Scn, seqName: String, seqType: String, 
 
   protected[scn] def execute() {
     val currentTime = System.currentTimeMillis()
-    while(queue.hasMore && (currentTime - queue.front.get.startTime) > timeoutInMs) {
+    while (queue.hasMore && (currentTime - queue.front.get.startTime) > timeoutInMs) {
       val callback = queue.dequeue()
       executor.executeCallback(callback, Left(new TimeoutException("Timed out while waiting for SCN response.")))
     }
     if (queue.count > 0) {
       scnMethod(seqName, (seq: Seq[T], optException: Option[Exception]) => {
-        this ! ExecuteOnScnResponse(if(seq == null) Seq() else seq, optException)
+        this ! ExecuteOnScnResponse(if (seq == null) Seq() else seq, optException)
       }, queue.count)
     }
   }
@@ -117,7 +117,11 @@ abstract class ScnCallQueueActor[T](scn: Scn, seqName: String, seqType: String, 
         case toBatch: Batched[T] =>
           batch(toBatch.cb)
         case Execute() =>
-          execute()
+          try {
+            execute()
+          } catch {
+            case e: Exception => error("Got an error in SCN call queue actor", e)
+          }
         case ExecuteOnScnResponse(response: Seq[T], error: Option[Exception]) =>
           executeScnResponse(response, error)
         case _ => throw new UnsupportedOperationException()
@@ -175,6 +179,7 @@ trait CallbackExecutor[T] {
  */
 class DefaultCallbackExecutor[T](name: String, scn: Scn) extends Actor with CallbackExecutor[T] with Traced with Logging {
   val scnResponseTimer = tracedTimer(name + "-callback")
+
   def act() {
     loop {
       react {

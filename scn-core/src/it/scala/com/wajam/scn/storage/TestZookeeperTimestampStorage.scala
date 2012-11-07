@@ -4,12 +4,31 @@ import org.scalatest.junit.JUnitRunner
 import org.junit.runner.RunWith
 import com.wajam.nrv.cluster.zookeeper.ZookeeperClient
 import org.scalatest.{BeforeAndAfter, FunSuite}
+import org.scalatest.matchers.ShouldMatchers._
+import com.wajam.nrv.utils.{CurrentTime, ControlableCurrentTime}
 
 @RunWith(classOf[JUnitRunner])
 class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
   val TS_NAME = "it_ts_tests"
-  val zkClient = new ZookeeperClient("127.0.0.1")
-  val storage = new ZookeeperTimestampStorage(zkClient, TS_NAME, 5000)
+  val zkServerAddress = "127.0.0.1/tests"
+  var zkClient: ZookeeperClient = null
+  var storage: ZookeeperTimestampStorage = null
+
+  before {
+    zkClient = new ZookeeperClient(zkServerAddress)
+    try {
+      zkClient.delete("/scn/timestamp/%s".format(TS_NAME))
+    } catch {
+      case e: Exception =>
+    }
+    storage = new ZookeeperTimestampStorage(zkClient, TS_NAME, 5000, 1000)
+  }
+
+  after {
+    storage = null
+    zkClient.close()
+    zkClient = null
+  }
 
   test("increment") {
     val range = storage.next(10)
@@ -41,16 +60,83 @@ class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
   }
 
   test("storage with drifting clock") {
-    val inTimeStorage = new ZookeeperTimestampStorage(zkClient, TS_NAME + 1, 5000)
+    val saveAheadMillis = 5000
+    val inTimeStorage = new ZookeeperTimestampStorage(zkClient, TS_NAME, saveAheadMillis, 1000)
     val onTime = inTimeStorage.next(1)
 
-    val driftedStorage = new ZookeeperTimestampStorage(zkClient, TS_NAME + 1, 5000) with CurrentTime {
-      override def currentTime = System.currentTimeMillis() - (10 * 1000) // 1 minute late clock
-    }
+    val otherStorage = new ZookeeperTimestampStorage(zkClient, TS_NAME, saveAheadMillis, 1000) with ControlableCurrentTime
 
-    intercept[Exception] {
-      driftedStorage.next(1)
-    }
+    // Test other storage in time but before save ahead
+    evaluating {
+      otherStorage.next(1)
+    } should produce [Exception]
+
+    // Test other storage with one minute late clock
+    otherStorage.currentTime -= (60 * 1000) // 1 minute late clock
+    evaluating {
+      otherStorage.next(1)
+    } should produce [Exception]
+
+    // Test other storage again after advancing one minute + save ahead
+    otherStorage.currentTime += (60 * 1000 + saveAheadMillis)
+    val backOnTime = otherStorage.next(1)
+
+    onTime(0) should be < (backOnTime(0))
+  }
+
+  test("concurent instances overlaps") {
+    val saveAheadMillis = 5000
+    val renewalMillis = 1000
+    val initialTime = new CurrentTime{}.currentTime
+
+    val zk1 = new ZookeeperClient(zkServerAddress)
+    val storage1 = new ZookeeperTimestampStorage(zk1, TS_NAME, saveAheadMillis, renewalMillis) with ControlableCurrentTime
+
+    val zk2 = new ZookeeperClient(zkServerAddress)
+    val storage2 = new ZookeeperTimestampStorage(zk2, TS_NAME, saveAheadMillis, renewalMillis) with ControlableCurrentTime
+
+    // First instance initial timestamp
+    storage1.currentTime = initialTime
+    storage1.next(1)
+
+    // Second instance not able to generate timestamp until save ahead expires
+    storage2.currentTime = initialTime
+    evaluating {
+      storage2.next(1)
+    } should produce [Exception]
+
+    // Second instance able to generate timestamp at save ahead expiration
+    storage2.currentTime += saveAheadMillis
+    storage2.next(1)
+
+    // First instance not able to generate timestamp anymore at save ahead expiration because second instance is now in charge
+    storage1.currentTime = storage2.currentTime
+    evaluating {
+      storage1.next(1)
+    } should produce [Exception]
+
+    // Second instance should update save ahead expiration at renewal time before real expiration. Because of this
+    // the first instance is not be able to generate a timestamp at the original save ahead expiration time
+    storage2.currentTime += saveAheadMillis - renewalMillis
+    storage2.next(1)
+
+    storage1.currentTime += saveAheadMillis
+    evaluating {
+      storage1.next(1)
+    } should produce [Exception]
+
+    // First instance able to generate timestamp again after save ahead expiration
+    storage1.currentTime += saveAheadMillis
+    storage1.next(1)
+
+    // Now the second instance fail as expected...
+    storage2.currentTime = storage1.currentTime
+    evaluating {
+      storage2.next(1)
+    } should produce [Exception]
+
+    zk1.close()
+    zk2.close()
   }
 
 }
