@@ -5,7 +5,7 @@ import storage._
 
 import java.util.concurrent._
 import scala.collection.JavaConversions._
-import com.wajam.nrv.cluster.zookeeper.ZookeeperClient
+import com.wajam.nrv.zookeeper.ZookeeperClient
 import com.wajam.nrv.protocol.Protocol
 import com.wajam.nrv.Logging
 import com.yammer.metrics.scala.Instrumented

@@ -2,28 +2,31 @@ package com.wajam.scn.storage
 
 import org.scalatest.junit.JUnitRunner
 import org.junit.runner.RunWith
-import com.wajam.nrv.cluster.zookeeper.ZookeeperClient
+import com.wajam.nrv.zookeeper.ZookeeperClient
 import org.scalatest.{BeforeAndAfter, FunSuite}
 import org.scalatest.matchers.ShouldMatchers._
 import com.wajam.nrv.utils.Future
+import com.wajam.scn.storage.ZookeeperSequenceStorage._
+
 
 @RunWith(classOf[JUnitRunner])
 class TestZookeeperSequenceStorage extends FunSuite with BeforeAndAfter {
-  val SEED = 1
-  val NAME = "it_seq_test"
-  val BATCH_SIZE = 100
+  val seqSeed = 1
+  val seqName = "it_seq_test"
+  val batchSize = 100
   val zkServerAddress = "127.0.0.1/tests"
+
   var zkClient: ZookeeperClient = null
   var storage: ZookeeperSequenceStorage = null
 
   before {
     zkClient = new ZookeeperClient(zkServerAddress)
     try {
-      zkClient.delete("/scn/sequence/%s".format(NAME))
+      zkClient.delete(sequencePath(seqName))
     } catch {
       case e: Exception =>
     }
-    storage = new ZookeeperSequenceStorage(zkClient, NAME, BATCH_SIZE, SEED)
+    storage = new ZookeeperSequenceStorage(zkClient, seqName, batchSize, seqSeed)
   }
 
   after {
@@ -34,7 +37,7 @@ class TestZookeeperSequenceStorage extends FunSuite with BeforeAndAfter {
 
   test("initial value") {
     //make sure no value saved
-    zkClient.delete("/scn/sequence/%s".format(NAME))
+    zkClient.delete(sequencePath(seqName))
 
     val expectedInitValue = 10010
     storage = new ZookeeperSequenceStorage(
@@ -57,7 +60,7 @@ class TestZookeeperSequenceStorage extends FunSuite with BeforeAndAfter {
     storage.next(50) //this should reserve 1 to 100 for the test instance
 
     //simulate another node taking 1000 ids (100 - 1100)
-    zkClient.incrementCounter("/scn/sequence/%s".format(NAME), 1000, 0)
+    zkClient.incrementCounter(sequencePath(seqName), 1000, 0)
 
     val ids = storage.next(100)
 
@@ -68,7 +71,7 @@ class TestZookeeperSequenceStorage extends FunSuite with BeforeAndAfter {
 
   test("test seed greater than current zookeeper stored value should return seed") {
     //set counter to 4 in zookeeper
-    zkClient.incrementCounter("/scn/sequence/%s".format(NAME), 4, 0)
+    zkClient.incrementCounter(sequencePath(seqName), 4, 0)
 
     val seed = 1000
 
@@ -88,10 +91,10 @@ class TestZookeeperSequenceStorage extends FunSuite with BeforeAndAfter {
   }
 
   test("get unique id if exact batchsize is used for count") {
-    val seq1 = storage.next(BATCH_SIZE)
+    val seq1 = storage.next(batchSize)
 
     assert(1 === seq1(0))
-    assert(BATCH_SIZE === seq1.length)
+    assert(batchSize === seq1.length)
     assert(100 === seq1(99))
 
     val seq2 = storage.next(1)
@@ -103,7 +106,7 @@ class TestZookeeperSequenceStorage extends FunSuite with BeforeAndAfter {
 
     // Setup storages
     val zkCLients = 1.to(5).map(_ => new ZookeeperClient(zkServerAddress)).toList
-    val storages = zkCLients.map(new ZookeeperSequenceStorage(_, NAME, 50, SEED)).toList
+    val storages = zkCLients.map(new ZookeeperSequenceStorage(_, seqName, 50, seqSeed)).toList
 
     // Request sequences concurently (one thread per storage)
     val iterations = 25

@@ -1,6 +1,7 @@
 package com.wajam.scn
 
-import com.wajam.nrv.cluster.zookeeper.{ZookeeperClusterManager, ZookeeperClient}
+import com.wajam.nrv.zookeeper.cluster.ZookeeperClusterManager
+import com.wajam.nrv.zookeeper.ZookeeperClient
 import com.wajam.nrv.cluster.{LocalNode, StaticClusterManager, Cluster}
 import com.wajam.scn.storage.StorageType
 import java.net.URL
