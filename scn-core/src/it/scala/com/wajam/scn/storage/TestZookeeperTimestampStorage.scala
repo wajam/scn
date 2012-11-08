@@ -2,14 +2,15 @@ package com.wajam.scn.storage
 
 import org.scalatest.junit.JUnitRunner
 import org.junit.runner.RunWith
-import com.wajam.nrv.cluster.zookeeper.ZookeeperClient
+import com.wajam.nrv.zookeeper.ZookeeperClient
 import org.scalatest.{BeforeAndAfter, FunSuite}
 import org.scalatest.matchers.ShouldMatchers._
 import com.wajam.nrv.utils.{CurrentTime, ControlableCurrentTime}
+import com.wajam.scn.storage.ZookeeperTimestampStorage._
 
 @RunWith(classOf[JUnitRunner])
 class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
-  val TS_NAME = "it_ts_tests"
+  val tsName = "it_ts_tests"
   val zkServerAddress = "127.0.0.1/tests"
   var zkClient: ZookeeperClient = null
   var storage: ZookeeperTimestampStorage = null
@@ -17,11 +18,11 @@ class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
   before {
     zkClient = new ZookeeperClient(zkServerAddress)
     try {
-      zkClient.delete("/scn/timestamp/%s".format(TS_NAME))
+      zkClient.delete(timestampPath(tsName))
     } catch {
       case e: Exception =>
     }
-    storage = new ZookeeperTimestampStorage(zkClient, TS_NAME, 5000, 1000)
+    storage = new ZookeeperTimestampStorage(zkClient, tsName, 5000, 1000)
   }
 
   after {
@@ -61,10 +62,10 @@ class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
 
   test("storage with drifting clock") {
     val saveAheadMillis = 5000
-    val inTimeStorage = new ZookeeperTimestampStorage(zkClient, TS_NAME, saveAheadMillis, 1000)
+    val inTimeStorage = new ZookeeperTimestampStorage(zkClient, tsName, saveAheadMillis, 1000)
     val onTime = inTimeStorage.next(1)
 
-    val otherStorage = new ZookeeperTimestampStorage(zkClient, TS_NAME, saveAheadMillis, 1000) with ControlableCurrentTime
+    val otherStorage = new ZookeeperTimestampStorage(zkClient, tsName, saveAheadMillis, 1000) with ControlableCurrentTime
 
     // Test other storage in time but before save ahead
     evaluating {
@@ -90,10 +91,10 @@ class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
     val initialTime = new CurrentTime{}.currentTime
 
     val zk1 = new ZookeeperClient(zkServerAddress)
-    val storage1 = new ZookeeperTimestampStorage(zk1, TS_NAME, saveAheadMillis, renewalMillis) with ControlableCurrentTime
+    val storage1 = new ZookeeperTimestampStorage(zk1, tsName, saveAheadMillis, renewalMillis) with ControlableCurrentTime
 
     val zk2 = new ZookeeperClient(zkServerAddress)
-    val storage2 = new ZookeeperTimestampStorage(zk2, TS_NAME, saveAheadMillis, renewalMillis) with ControlableCurrentTime
+    val storage2 = new ZookeeperTimestampStorage(zk2, tsName, saveAheadMillis, renewalMillis) with ControlableCurrentTime
 
     // First instance initial timestamp
     storage1.currentTime = initialTime

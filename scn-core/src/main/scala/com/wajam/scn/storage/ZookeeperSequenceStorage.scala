@@ -1,17 +1,17 @@
 package com.wajam.scn.storage
 
-import com.wajam.nrv.cluster.zookeeper.ZookeeperClient
-import com.wajam.nrv.cluster.zookeeper.ZookeeperClient._
+import com.wajam.nrv.zookeeper.ZookeeperClient
+import com.wajam.nrv.zookeeper.ZookeeperClient._
 import com.wajam.scn.SequenceRange
+import com.wajam.nrv.zookeeper.service.ZookeeperService
+import com.wajam.scn.storage.ZookeeperSequenceStorage._
 
 /**
  * Sequence storage that stores sequences in Zookeeper
  */
 class ZookeeperSequenceStorage(zkClient: ZookeeperClient, name: String, saveAheadSize: Int, seed: Long = 1)
   extends ScnStorage[Long] {
-  zkClient.ensureExists("/scn", "")
-  zkClient.ensureExists("/scn/sequence", "")
-  zkClient.ensureExists("/scn/sequence/%s".format(name), seed)
+  zkClient.ensureAllExists(sequencePath(name), seed)
 
   private var availableSeq = SequenceRange(seed, seed)
 
@@ -43,7 +43,7 @@ class ZookeeperSequenceStorage(zkClient: ZookeeperClient, name: String, saveAhea
   }
 
   private def incrementZookeeperSequence(batchSize: Long): Long = {
-    zkClient.incrementCounter("/scn/sequence/%s".format(name), batchSize, seed)
+    zkClient.incrementCounter(sequencePath(name), batchSize, seed)
   }
 
   private def createSequenceFromLocalAvailableSeq(count: Int): List[Long] = {
@@ -51,4 +51,8 @@ class ZookeeperSequenceStorage(zkClient: ZookeeperClient, name: String, saveAhea
     availableSeq = SequenceRange(to, availableSeq.to)
     List.range(from, to)
   }
+}
+
+object ZookeeperSequenceStorage {
+  def sequencePath(sequenceName: String) = ZookeeperService.dataPath("scn") + "/sequences/" + sequenceName
 }
