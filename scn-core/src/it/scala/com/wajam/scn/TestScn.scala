@@ -16,10 +16,18 @@ import com.wajam.nrv.Logging
  */
 class TestScn extends FunSuite with BeforeAndAfter {
 
+  var testCluster: TestSequenceCluster = null
   object Log extends Logging
 
   before {
     ZookeeperTestingClusterDriver.cleanupZookeeper()
+  }
+
+  after {
+    if (testCluster != null) {
+      testCluster.stop()
+      testCluster = null
+    }
   }
 
   def createClusterInstance(size: Int, i: Int, manager: ZookeeperClusterManager): TestingClusterInstance = {
@@ -34,7 +42,8 @@ class TestScn extends FunSuite with BeforeAndAfter {
     cluster.registerService(scn)
     scn.addMember(token, cluster.localNode)
 
-    val scnClient = new ScnClient(scn, ScnClientConfig())
+    // Increase client timeout during test to prevent client timeout during test failover
+    val scnClient = new ScnClient(scn, ScnClientConfig(timeoutInMs = 5000))
     new TestingClusterInstance(cluster, scnClient)
   }
 
@@ -52,8 +61,6 @@ class TestScn extends FunSuite with BeforeAndAfter {
 
     def nodes = allNodes.filter(_ != clientNode)
 
-    def favoriteNode = allNodes(0)
-
     // Use the SCN client from the last node. This node will stay up during the whole test
     def scnClient = getInstance(clientNode).data.asInstanceOf[ScnClient]
 
@@ -61,7 +68,7 @@ class TestScn extends FunSuite with BeforeAndAfter {
       Log.info("### Starting test cluster")
       driver.init(clusterSize)
 
-      Log.info("### Test cluster started. Token={}. Favorite node={}. Client node={}", token, favoriteNode, clientNode)
+      Log.info("### Test cluster started. Token={}. First replica node={}. Client node={}", token, nodes(0), clientNode)
 
       // Warm-up SCN server
       val warmup = Promise[Boolean]
@@ -89,7 +96,7 @@ class TestScn extends FunSuite with BeforeAndAfter {
               exception match {
                 case Some(e) =>
                   Log.info("### Got exception {e} for worker {}", e, i)
-                  p.tryFailure(new Exception)
+                  p.tryFailure(e)
                 case _ =>
                   Log.info("### Got sequence {} for worker {}", sequence, i)
                   result = result ::: sequence.toList
@@ -108,13 +115,13 @@ class TestScn extends FunSuite with BeforeAndAfter {
     }
 
     def stop() = {
-      Log.info("### STOPING ***")
+      Log.info("### STOPING")
       stopLatch.success(true)
 
       // Collect results
       val allSequences = workers.flatMap(Future.blocking(_))
       allSequences.size should be(allSequences.distinct.size)
-      Log.info("### STOPED ***")
+      Log.info("### STOPED")
 
       driver.destroy()
 
@@ -132,39 +139,25 @@ class TestScn extends FunSuite with BeforeAndAfter {
     def waitForStatus(watchingNode: Node, watchedNodes: Seq[Node], status: MemberStatus) {
       val members = getInstance(watchingNode).cluster.services.values.flatMap(_.members)
       val watchedMembers = members.filter(member => watchedNodes.contains(member.node))
-      driver.waitForCondition[Boolean](watchedMembers.forall(_.status == MemberStatus.Up), _ == true)
+      driver.waitForCondition[Boolean](watchedMembers.forall(_.status == status), _ == true)
+    }
+
+    def printStatus() {
+      for (node <- allNodes) {
+        val cluster = getInstance(node).cluster
+        cluster.services.values.foreach(service => Log.info("\nLocal node: {}\n{}", cluster.localNode, service.printService))
+      }
+
     }
   }
 
-  test("single call") {
-    val driver = new ZookeeperTestingClusterDriver((size, i, manager) => createClusterInstance(size, i, manager))
-    driver.execute((driver, instance) => execute(instance), 5)
+  test("client should not be affected when all scn members but the first replica goes down and up due to zk") {
+    testCluster = new TestSequenceCluster("test_sequence").start()
 
-    def execute(instance: TestingClusterInstance) {
-      val scnClient = instance.data.asInstanceOf[ScnClient]
-
-      val p = Promise[Seq[Long]]
-
-      scnClient.fetchSequenceIds("test_cluster_seq", (sequence: Seq[Long], exception) => {
-        p.complete(sequence, exception)
-      }, 1)
-
-      val result = Future.blocking(p.future)
-
-      // TODO validate something!!!
-      Log.info("### RESULT {}, {}", result, instance.cluster.localNode)
-    }
-  }
-
-  test("client should not be affected when all scn members but the serving one goes down and up due to zk") {
-    val testCluster = new TestSequenceCluster("test_sequence").start()
-
-    // Disconnect all the zk clients but the favorite node one and reconnect them afterward
-
-    Log.info("### Working before ZK closed")
+    Log.info("### Working before ZK close")
     Thread.sleep(1000)
 
-
+    // Close zk of all but first replica
     for (instance <- testCluster.nodes.tail.map(testCluster.getInstance(_))) {
       Log.info("### Close ZK for {}", instance.cluster.localNode)
       instance.zkClient.close()
@@ -174,6 +167,7 @@ class TestScn extends FunSuite with BeforeAndAfter {
     Log.info("### Working further after ZK closed")
     Thread.sleep(1000)
 
+    // Reconnect all closed zk
     for (instance <- testCluster.nodes.tail.map(testCluster.getInstance(_))) {
       Log.info("### Connect ZK for {}", instance.cluster.localNode)
       instance.zkClient.connect()
@@ -182,8 +176,29 @@ class TestScn extends FunSuite with BeforeAndAfter {
     testCluster.waitForStatus(testCluster.nodes, MemberStatus.Up)
     Log.info("### Working further more after ZK connected")
     Thread.sleep(1000)
+  }
 
-    testCluster.stop()
+  test("client should not be affected when the first scn replica goes down and up due to zk") {
+    testCluster = new TestSequenceCluster("test_sequence", 3).start()
+
+    Log.info("### Working before ZK close")
+    Thread.sleep(1000)
+
+    // Disconnect zk of first replica
+    val instance = testCluster.getInstance(testCluster.nodes(0))
+    Log.info("### Close ZK for {}", instance.cluster.localNode)
+    instance.zkClient.close()
+
+    testCluster.waitForStatus(Seq(testCluster.nodes(0)), MemberStatus.Down)
+    Log.info("### Working further after ZK closed")
+    Thread.sleep(1000)
+
+    // Reconnect zk of first replica
+    instance.zkClient.connect()
+
+    testCluster.waitForStatus(Seq(testCluster.nodes(0)), MemberStatus.Up)
+    Log.info("### Working further more after ZK connected")
+    Thread.sleep(1000)
   }
 
   test("zookeeper storage construction (with client failure)") {
@@ -191,5 +206,4 @@ class TestScn extends FunSuite with BeforeAndAfter {
       new Scn("scn", ScnConfig(), StorageType.ZOOKEEPER)
     }
   }
-
 }
