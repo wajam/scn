@@ -39,11 +39,11 @@ class ScnConfiguration(config: Configuration) {
   }
 
   def getScnTimestampSaveAheadRenewalInMs: Int = {
-    config.getInt("edge.scn.timestamp.renewal.ms", 1000)
+    config.getInt("scn.timestamp.renewal.ms", 1000)
   }
 
   def getScnSequenceSaveAheadSize: Int = {
-    config.getInt("scn.sequence.saveahead.unit", 100)
+    config.getInt("scn.sequence.saveahead.unit", 1000)
   }
 
   def getScnSequenceSeeds: Map[String, Long] = {

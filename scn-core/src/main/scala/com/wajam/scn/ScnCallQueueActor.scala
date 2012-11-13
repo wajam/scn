@@ -26,7 +26,7 @@ class ScnSequenceCallQueueActor(scn: Scn, seqName: String, executionRateInMs: In
 
   override protected[scn] def executeScnResponse(response: Seq[Long], optException: Option[Exception]) {
     if (optException.isDefined) {
-      log.warn("Exception while fetching sequence numbers.", optException.get)
+      warn("Exception while fetching sequence numbers. {}", optException.get)
     } else {
       var sequenceNumbers = response
       while (queue.hasMore && sequenceNumbers.size >= queue.front.get.nb) {
@@ -58,9 +58,9 @@ class ScnTimestampCallQueueActor(scn: Scn, seqName: String, execRateInMs: Int, t
 
   override protected[scn] def executeScnResponse(response: Seq[Timestamp], optException: Option[Exception]) {
     if (optException.isDefined) {
-      log.warn("Exception while fetching timestamps.", optException.get)
+      warn("Exception while fetching timestamps. {}", optException.get)
     } else if (Timestamp(response.head.toString.toLong).compareTo(lastAllocated) < 1) {
-      log.info("Received outdated timestamps, discarding.")
+      info("Received outdated timestamps, discarding.")
     } else {
       var timestamps = response
       while (queue.hasMore && timestamps.size >= queue.front.get.nb) {
@@ -120,7 +120,7 @@ abstract class ScnCallQueueActor[T](scn: Scn, seqName: String, seqType: String, 
           try {
             execute()
           } catch {
-            case e: Exception => error("Got an error in SCN call queue actor", e)
+            case e: Exception => error("Got an error in SCN call queue actor {}", e)
           }
         case ExecuteOnScnResponse(response: Seq[T], error: Option[Exception]) =>
           executeScnResponse(response, error)
@@ -194,12 +194,12 @@ class DefaultCallbackExecutor[T](name: String, scn: Scn) extends Actor with Call
             }
             catch {
               case ex: Exception => {
-                log.warn("Caught exception while executing the SCN callback." +
+                warn("Caught exception while executing the SCN callback." +
                   " The callback code should catch exceptions and reply instead of throwing an exception.", ex)
               }
             }
           }
-        case _ => log.warn("Invalide message to callback executor!")
+        case _ => warn("Invalide message to callback executor!")
       }
     }
   }

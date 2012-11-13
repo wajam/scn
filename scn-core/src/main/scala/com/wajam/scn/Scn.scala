@@ -24,7 +24,7 @@ class Scn(serviceName: String = "scn",
           storageType: StorageType.Value = StorageType.ZOOKEEPER,
           zookeeperClient: Option[ZookeeperClient] = None)
   extends Service(serviceName, new ActionSupportOptions(protocol = protocol,
-    resolver = Some(new Resolver(tokenExtractor = Resolver.TOKEN_HASH_PARAM("name")))))
+    resolver = Some(new Resolver(replica = 2, tokenExtractor = Resolver.TOKEN_HASH_PARAM("name")))))
   with Logging with Instrumented {
 
   def this(serviceName: String,
