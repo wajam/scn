@@ -11,12 +11,9 @@ import com.wajam.nrv.utils.{NullLogging, Future, Promise}
 import org.scalatest.matchers.ShouldMatchers._
 import com.wajam.nrv.Logging
 
-/**
- * Description
- */
 class TestScn extends FunSuite with BeforeAndAfter {
 
-  var testCluster: TestSequenceCluster = null
+  var testCluster: TestSequenceCluster = _
   object Log extends Logging with NullLogging
 
   before {
@@ -176,6 +173,9 @@ class TestScn extends FunSuite with BeforeAndAfter {
     testCluster.waitForStatus(testCluster.nodes, MemberStatus.Up)
     Log.info("### Working further more after ZK connected")
     Thread.sleep(1000)
+
+    testCluster.stop()
+    testCluster = null
   }
 
   test("client should not be affected when the first scn replica goes down and up due to zk") {
@@ -199,6 +199,9 @@ class TestScn extends FunSuite with BeforeAndAfter {
     testCluster.waitForStatus(Seq(testCluster.nodes(0)), MemberStatus.Up)
     Log.info("### Working further more after ZK connected")
     Thread.sleep(1000)
+
+    testCluster.stop()
+    testCluster = null
   }
 
   test("zookeeper storage construction (with client failure)") {
