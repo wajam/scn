@@ -7,6 +7,8 @@ import scala.collection.mutable
 import storage.TimestampUtil
 import com.wajam.nrv.tracing.Traced
 import java.util.concurrent.TimeUnit
+import util.Random
+import com.wajam.nrv.service.Resolver
 
 /**
  * Actor that batches scn calls to get sequence numbers. It periodically call scn to get sequence numbers and then
@@ -17,8 +19,11 @@ import java.util.concurrent.TimeUnit
  *
  */
 class ScnSequenceCallQueueActor(scn: Scn, seqName: String, executionRateInMs: Int, timeoutInMs: Int,
-                                callbackExecutor: Option[CallbackExecutor[Long]] = None)
-  extends ScnCallQueueActor[Long](scn, seqName, "sequence", executionRateInMs, timeoutInMs, callbackExecutor) {
+                                executors: List[CallbackExecutor[Long]])
+  extends ScnCallQueueActor[Long](scn, seqName, "sequence", executionRateInMs, timeoutInMs, executors) {
+
+  def this(scn: Scn, seqName: String, executionRateInMs: Int, timeoutInMs: Int, callbackExecutor: CallbackExecutor[Long]) =
+    this(scn, seqName, executionRateInMs, timeoutInMs, List(callbackExecutor))
 
   protected def scnMethod = {
     scn.getNextSequence _
@@ -31,7 +36,7 @@ class ScnSequenceCallQueueActor(scn: Scn, seqName: String, executionRateInMs: In
       var sequenceNumbers = response
       while (queue.hasMore && sequenceNumbers.size >= queue.front.get.nb) {
         val scnCb = queue.dequeue()
-        executor.executeCallback(scnCb, Right(sequenceNumbers.take(scnCb.nb)))
+        executeCallback(scnCb, Right(sequenceNumbers.take(scnCb.nb)))
         sequenceNumbers = sequenceNumbers.drop(scnCb.nb)
       }
     }
@@ -47,8 +52,11 @@ class ScnSequenceCallQueueActor(scn: Scn, seqName: String, executionRateInMs: In
  *
  */
 class ScnTimestampCallQueueActor(scn: Scn, seqName: String, execRateInMs: Int, timeoutInMs: Int,
-                                 callbackExecutor: Option[CallbackExecutor[Timestamp]] = None)
-  extends ScnCallQueueActor[Timestamp](scn, seqName, "timestamps", execRateInMs, timeoutInMs, callbackExecutor) {
+                                 executors: List[CallbackExecutor[Timestamp]])
+  extends ScnCallQueueActor[Timestamp](scn, seqName, "timestamps", execRateInMs, timeoutInMs, executors) {
+
+  def this(scn: Scn, seqName: String, execRateInMs: Int, timeoutInMs: Int, callbackExecutor: CallbackExecutor[Timestamp]) =
+    this(scn, seqName, execRateInMs, timeoutInMs, List(callbackExecutor))
 
   private var lastAllocated: Timestamp = TimestampUtil.MIN
 
@@ -66,7 +74,7 @@ class ScnTimestampCallQueueActor(scn: Scn, seqName: String, execRateInMs: Int, t
       while (queue.hasMore && timestamps.size >= queue.front.get.nb) {
         val scnCb = queue.dequeue()
         val allocatedTimeStamps = timestamps.take(scnCb.nb)
-        executor.executeCallback(scnCb, Right(allocatedTimeStamps))
+        executeCallback(scnCb, Right(allocatedTimeStamps))
         lastAllocated = allocatedTimeStamps.last
         timestamps = timestamps.drop(scnCb.nb)
       }
@@ -78,14 +86,10 @@ class ScnTimestampCallQueueActor(scn: Scn, seqName: String, execRateInMs: Int, t
  * Base class for call queue actors.
  */
 abstract class ScnCallQueueActor[T](scn: Scn, seqName: String, seqType: String, execRateInMs: Int, timeoutInMs: Int,
-                                    callbackExecutor: Option[CallbackExecutor[T]] = None)
+                                    val executors: List[CallbackExecutor[T]])
   extends Actor with Logging with Traced {
 
   private val timer = new Timer
-
-  protected val executor: CallbackExecutor[T] =
-    callbackExecutor.getOrElse(
-      new DefaultCallbackExecutor[T](seqType + "-" + seqName, scn).start().asInstanceOf[CallbackExecutor[T]])
 
   protected val queue: CountedScnCallQueue[T] = CountedScnCallQueue[T](new mutable.Queue[ScnCallback[T]]())
 
@@ -100,7 +104,7 @@ abstract class ScnCallQueueActor[T](scn: Scn, seqName: String, seqType: String, 
     val currentTime = System.currentTimeMillis()
     while (queue.hasMore && (currentTime - queue.front.get.startTime) > timeoutInMs) {
       val callback = queue.dequeue()
-      executor.executeCallback(callback, Left(new TimeoutException("Timed out while waiting for SCN response.")))
+      executeCallback(callback, Left(new TimeoutException("Timed out while waiting for SCN response.")))
     }
     if (queue.count > 0) {
       scnMethod(seqName, (seq: Seq[T], optException: Option[Exception]) => {
@@ -110,6 +114,11 @@ abstract class ScnCallQueueActor[T](scn: Scn, seqName: String, seqType: String, 
   }
 
   protected[scn] def executeScnResponse(response: Seq[T], error: Option[Exception])
+
+  protected[scn] def executeCallback(cb: ScnCallback[T], response: Either[Exception, Seq[T]]) {
+    val token = if (cb.token >= 0) cb.token else Random.nextLong() % Resolver.MAX_TOKEN
+    executors((token % executors.size).toInt).executeCallback(cb, response)
+  }
 
   def act() {
     loop {
@@ -179,6 +188,8 @@ trait CallbackExecutor[T] {
  */
 class DefaultCallbackExecutor[T](name: String, scn: Scn) extends Actor with CallbackExecutor[T] with Traced with Logging {
   val scnResponseTimer = tracedTimer(name + "-callback")
+
+  def queueSize = mailboxSize
 
   def act() {
     loop {

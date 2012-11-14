@@ -34,5 +34,6 @@ case class CountedScnCallQueue[T](private val cbQueue: mutable.Queue[ScnCallback
 case class ScnCallback[T](callback: (Seq[T], Option[Exception]) => Unit,
                           nb: Int,
                           startTime: Long = System.currentTimeMillis(),
+                          token: Long = -1,
                           context: Option[TraceContext] = None)
 

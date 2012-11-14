@@ -35,7 +35,7 @@ object ScnTestingClient extends App with Logging {
 
   Thread.sleep(2000)
 
-  val scnClient = new ScnClient(scn, ScnClientConfig(20))
+  val scnClient = new ScnClient(scn, ScnClientConfig(20)).start()
   while (true) {
     scnClient.fetchSequenceIds("ScnTestingClient", (sequence: Seq[Long], exception) => {
       exception match {
@@ -45,7 +45,7 @@ object ScnTestingClient extends App with Logging {
         case _ =>
           info(sequence.toString())
       }
-    }, 5)
+    }, 5, -1)
     Thread.sleep(1000)
   }
 }

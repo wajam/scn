@@ -40,7 +40,7 @@ class TestSCNClient extends FunSuite with MockitoSugar with BeforeAndAfter {
 
     cluster.start()
 
-    scnClient = new ScnClient(scn)
+    scnClient = new ScnClient(scn).start()
   }
 
   after {
@@ -53,7 +53,7 @@ class TestSCNClient extends FunSuite with MockitoSugar with BeforeAndAfter {
     scnClient.fetchTimestamps("test", (seq, optEx) => {
       res = seq
       latch.countDown()
-    }, 1)
+    }, 1, -1)
 
     latch.await(2, TimeUnit.SECONDS)
     assert(res.length == 1)
@@ -65,7 +65,7 @@ class TestSCNClient extends FunSuite with MockitoSugar with BeforeAndAfter {
     scnClient.fetchSequenceIds("test", (seq, optEx) => {
       res = seq
       latch.countDown()
-    }, 1)
+    }, 1, -1)
 
     latch.await(2, TimeUnit.SECONDS)
     assert(res.length == 1)
@@ -73,7 +73,7 @@ class TestSCNClient extends FunSuite with MockitoSugar with BeforeAndAfter {
 
   test("next sequence batching") {
     val spyScn = spy(scn)
-    val scnClient = new ScnClient(spyScn, ScnClientConfig(1000))
+    val scnClient = new ScnClient(spyScn, ScnClientConfig(1000)).start()
 
     val count = 10
     val latch = new CountDownLatch(count)
@@ -87,7 +87,7 @@ class TestSCNClient extends FunSuite with MockitoSugar with BeforeAndAfter {
         res = seq
         len += seq.length
         latch.countDown()
-      }, 10)
+      }, 10, -1)
     }
 
     latch.await()
@@ -102,17 +102,17 @@ class TestSCNClient extends FunSuite with MockitoSugar with BeforeAndAfter {
     scnClient.fetchSequenceIds("1", (seq, optEx) => {
       res += seq
       latch.countDown()
-    }, 1)
+    }, 1, -1)
 
     scnClient.fetchTimestamps("2", (seq, optEx) => {
       res += seq
       latch.countDown()
-    }, 1)
+    }, 1, -1)
 
     scnClient.fetchSequenceIds("3", (seq, optEx) => {
       res += seq
       latch.countDown()
-    }, 1)
+    }, 1, -1)
 
     latch.await()
     assert(res.length == 3)
