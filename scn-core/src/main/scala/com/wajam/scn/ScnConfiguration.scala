@@ -27,7 +27,7 @@ class ScnConfiguration(config: Configuration) {
   }
 
   def getNrvZookeeperServers: String = {
-    config.getString("scn.nrv.zookeeper.servers")
+    config.getStringArray("scn.nrv.zookeeper.servers").mkString(",")
   }
 
   def getScnSequenceStorage: String = {

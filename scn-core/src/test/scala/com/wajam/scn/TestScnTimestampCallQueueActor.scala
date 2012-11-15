@@ -22,7 +22,7 @@ class TestScnTimestampCallQueueActor extends FunSuite with BeforeAndAfter with M
   before {
     mockScn = new MockScn
     mockCallbackExecutor = mock[CallbackExecutor[Timestamp]]
-    timestampActor = new ScnTimestampCallQueueActor(mockScn, "test-timestamp", 10, 10000, Some(mockCallbackExecutor))
+    timestampActor = new ScnTimestampCallQueueActor(mockScn, "test-timestamp", 10, 10000, mockCallbackExecutor)
     timestampActor.start()
   }
 

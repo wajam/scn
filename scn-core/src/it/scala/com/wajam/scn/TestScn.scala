@@ -40,7 +40,7 @@ class TestScn extends FunSuite with BeforeAndAfter {
     scn.addMember(token, cluster.localNode)
 
     // Increase client timeout during test to prevent client timeout during test failover
-    val scnClient = new ScnClient(scn, ScnClientConfig(timeoutInMs = 5000))
+    val scnClient = new ScnClient(scn, ScnClientConfig(timeoutInMs = 5000)).start()
     new TestingClusterInstance(cluster, scnClient)
   }
 
@@ -71,7 +71,7 @@ class TestScn extends FunSuite with BeforeAndAfter {
       val warmup = Promise[Boolean]
       scnClient.fetchSequenceIds(sequenceName, (sequence: Seq[Long], exception) => {
         warmup.success(true)
-      }, 1)
+      }, 1, -1)
       Future.blocking(warmup.future)
 
       // Create multiple workers which fetch new sequences until asked to stop
@@ -92,13 +92,13 @@ class TestScn extends FunSuite with BeforeAndAfter {
             scnClient.fetchSequenceIds(sequenceName, (sequence: Seq[Long], exception) => {
               exception match {
                 case Some(e) =>
-                  Log.info("### Got exception {e} for worker {}", e, i)
+                  Log.info("### Got exception {} for worker {}", e, i)
                   p.tryFailure(e)
                 case _ =>
                   Log.info("### Got sequence {} for worker {}", sequence, i)
                   result = result ::: sequence.toList
               }
-            }, 1)
+            }, 1, i)
             Thread.sleep(sleepDuration)
           }
 
@@ -174,8 +174,9 @@ class TestScn extends FunSuite with BeforeAndAfter {
     Log.info("### Working further more after ZK connected")
     Thread.sleep(1000)
 
-    testCluster.stop()
+    val cluster = testCluster
     testCluster = null
+    cluster.stop()
   }
 
   test("client should not be affected when the first scn replica goes down and up due to zk") {
@@ -200,8 +201,9 @@ class TestScn extends FunSuite with BeforeAndAfter {
     Log.info("### Working further more after ZK connected")
     Thread.sleep(1000)
 
-    testCluster.stop()
+    val cluster = testCluster
     testCluster = null
+    cluster.stop()
   }
 
   test("zookeeper storage construction (with client failure)") {
