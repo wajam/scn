@@ -10,4 +10,4 @@ package com.wajam.scn
 case class ScnConfig(timestampSaveAheadMs: Int = 6000, timestampSaveAheadRenewalMs: Int = 1000,
                      sequenceSaveAheadSize: Int = 1000, sequenceSeeds: Map[String, Long] = Map())
 
-case class ScnClientConfig(executionRateInMs: Int = 10, timeoutInMs: Int = 1000)
+case class ScnClientConfig(executionRateInMs: Int = 10, timeoutInMs: Int = 1000, numExecutor: Int = 100)
