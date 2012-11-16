@@ -196,7 +196,7 @@ trait CallbackExecutor[T] {
  * The callback is executed in an actor message loop.
  */
 class ClientCallbackExecutor[T](name: String, scn: Scn) extends Actor with CallbackExecutor[T] with Traced with Logging {
-  val scnResponseTimer = tracedTimer("scn-client-callback-time", name)
+  val scnResponseTimer = tracedTimer("scn-client-callback-time")
 
   def queueSize = mailboxSize
 

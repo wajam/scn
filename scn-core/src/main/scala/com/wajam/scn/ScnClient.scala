@@ -13,18 +13,18 @@ import scala.collection.JavaConversions._
  *
  */
 class ScnClient(scn: Scn, config: ScnClientConfig = ScnClientConfig()) extends Instrumented {
-  private val metricSequenceStackSize = metrics.gauge[Int]("scn-sequences-stack-size")({
+  private val metricSequenceStackSize = metrics.gauge[Int]("scn-stack-size", "sequence")({
     sequenceStackActors.size()
   })
-  private val sequenceExecutorsQueueSize = metrics.gauge("scn-sequences-executors-queue-size") {
+  private val sequenceExecutorsQueueSize = metrics.gauge("scn-executors-queue-size", "sequence") {
     sequenceExecutors.foldLeft[Int](0)((sum: Int, executor: ClientCallbackExecutor[Long]) => {
       sum + executor.queueSize
     })
   }
-  private val metricTimestampStackSize = metrics.gauge[Int]("scn-timestamps-stack-size")({
+  private val metricTimestampStackSize = metrics.gauge[Int]("scn-stack-size", "timestamp")({
     timestampStackActors.size()
   })
-  private val timestampExecutorsQueueSize = metrics.gauge("scn-timestamp-executors-queue-size") {
+  private val timestampExecutorsQueueSize = metrics.gauge("scn-executors-queue-size", "timestamp") {
     timestampExecutors.foldLeft[Int](0)((sum: Int, executor: ClientCallbackExecutor[Timestamp]) => {
       sum + executor.queueSize
     })
@@ -58,7 +58,7 @@ class ScnClient(scn: Scn, config: ScnClientConfig = ScnClientConfig()) extends I
     })
     timestampActor ! Batched[Timestamp](ScnCallback[Timestamp](cb, nb, System.currentTimeMillis(), token,
       scn.service.tracer.currentContext))
-    metricNbCalls.count
+    metricNbCalls += 1
   }
 
   /**
@@ -80,7 +80,7 @@ class ScnClient(scn: Scn, config: ScnClientConfig = ScnClientConfig()) extends I
     })
     sequenceActor ! Batched[Long](ScnCallback[Long](cb, nb, System.currentTimeMillis(), token,
       scn.service.tracer.currentContext))
-    metricNbCalls.count
+    metricNbCalls += 1
   }
 
   def start() = {

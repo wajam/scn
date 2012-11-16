@@ -32,12 +32,16 @@ class Scn(serviceName: String = "scn",
            storageType: StorageType.Value = StorageType.ZOOKEEPER,
            zookeeperClient: Option[ZookeeperClient] = None) = this(serviceName, None, config, storageType, zookeeperClient)
 
-  private val getNextSequenceTime = metrics.timer("scn-getnext-time", "sequence")
-  private val getNextTimestampTime = metrics.timer("scn-getnext-time", "timestamp")
-  private val getNextSequenceMeter = metrics.meter("scn-getnext", "scn-getnext", "sequence")
-  private val getNextTimestampMeter = metrics.meter("scn-getnext", "scn-getnext", "timestamp")
-  private val getNextSequenceCountMeter = metrics.meter("scn-getnext-count", "scn-getnext-count", "sequence")
-  private val getNextTimestampCountMeter = metrics.meter("scn-getnext-count", "scn-getnext-count", "timestamp")
+  lazy private val nextSequenceTime = metrics.timer("scn-getnext-time", "sequence")
+  lazy private val nextTimestampTime = metrics.timer("scn-getnext-time", "timestamp")
+  lazy private val nextSequenceCalls = metrics.meter("scn-getnext-calls", "scn-getnext-calls", "sequence")
+  lazy private val nextTimestampCalls = metrics.meter("scn-getnext-calls", "scn-getnext-calls", "timestamp")
+  lazy private val nextSequenceSuccess = metrics.meter("scn-getnext-success", "scn-getnext-success", "sequence")
+  lazy private val nextTimestampSuccess = metrics.meter("scn-getnext-success", "scn-getnext-success", "timestamp")
+  lazy private val nextSequenceError = metrics.meter("scn-getnext-error", "scn-getnext-error", "sequence")
+  lazy private val nextTimestampError = metrics.meter("scn-getnext-error", "scn-getnext-error", "timestamp")
+  lazy private val nextSequenceCallsSize = metrics.meter("scn-getnext-calls-size", "scn-getnext-calls-size", "sequence")
+  lazy private val nextTimestampCallsSize = metrics.meter("scn-getnext-calls-size", "scn-getnext-calls-size", "timestamp")
 
   private val sequenceActors = new ConcurrentHashMap[String, SequenceActor[Long]]
   private val timestampActors = new ConcurrentHashMap[String, SequenceActor[Timestamp]]
@@ -47,11 +51,11 @@ class Scn(serviceName: String = "scn",
     throw new IllegalArgumentException("Zookeeper storage type require ZookeeperClient argument.")
 
   private[scn] val nextTimestamp = this.registerAction(new Action("/timestamp/:name/next", msg => {
-    getNextTimestampMeter.mark()
-    val timer = getNextTimestampTime.timerContext()
+    nextTimestampCalls.mark()
+    val timer = nextTimestampTime.timerContext()
     val name = msg.parameters("name").toString
     val nb = msg.parameters("nb").toString.toInt
-    getNextTimestampCountMeter.mark(nb)
+    nextTimestampCallsSize.mark(nb)
 
     val timestampActor = timestampActors.getOrElse(name, {
       val actor = new SequenceActor[Timestamp](name, storageType match {
@@ -72,9 +76,11 @@ class Scn(serviceName: String = "scn",
       e match {
         case Some(ex) =>
           msg.replyWithError(ex)
+          nextSequenceError.mark()
         case _ =>
           val hdr = Map("name" -> name, "sequence" -> seq)
           msg.reply(hdr)
+          nextSequenceSuccess.mark()
       }
       timer.stop()
     }, nb)
@@ -90,11 +96,11 @@ class Scn(serviceName: String = "scn",
   }
 
   private[scn] val nextSequence = this.registerAction(new Action("/sequence/:name/next", msg => {
-    getNextSequenceMeter.mark()
-    val timer = getNextSequenceTime.timerContext()
+    nextSequenceCalls.mark()
+    val timer = nextSequenceTime.timerContext()
     val name = msg.parameters("name").toString
     val nb = msg.parameters("nb").toString.toInt
-    getNextSequenceCountMeter.mark(nb)
+    nextSequenceCallsSize.mark(nb)
 
     val sequenceActor = sequenceActors.getOrElse(name, {
       val actor = new SequenceActor[Long](name, storageType match {
@@ -114,9 +120,11 @@ class Scn(serviceName: String = "scn",
       e match {
         case Some(ex) =>
           msg.replyWithError(ex)
+          nextTimestampError.mark()
         case _ =>
           val hdr = Map("name" -> name, "sequence" -> seq)
           msg.reply(hdr)
+          nextTimestampSuccess.mark()
       }
       timer.stop()
     }, nb)
