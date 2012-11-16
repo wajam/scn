@@ -17,7 +17,7 @@ class ScnClient(scn: Scn, config: ScnClientConfig = ScnClientConfig()) extends I
     sequenceStackActors.size()
   })
   private val sequenceExecutorsQueueSize = metrics.gauge("scn-sequences-executors-queue-size") {
-    sequenceExecutors.foldLeft[Int](0)((sum: Int, executor: DefaultCallbackExecutor[Long]) => {
+    sequenceExecutors.foldLeft[Int](0)((sum: Int, executor: ClientCallbackExecutor[Long]) => {
       sum + executor.queueSize
     })
   }
@@ -25,7 +25,7 @@ class ScnClient(scn: Scn, config: ScnClientConfig = ScnClientConfig()) extends I
     timestampStackActors.size()
   })
   private val timestampExecutorsQueueSize = metrics.gauge("scn-timestamp-executors-queue-size") {
-    timestampExecutors.foldLeft[Int](0)((sum: Int, executor: DefaultCallbackExecutor[Timestamp]) => {
+    timestampExecutors.foldLeft[Int](0)((sum: Int, executor: ClientCallbackExecutor[Timestamp]) => {
       sum + executor.queueSize
     })
   }
@@ -33,11 +33,11 @@ class ScnClient(scn: Scn, config: ScnClientConfig = ScnClientConfig()) extends I
 
   private val sequenceStackActors = new ConcurrentHashMap[String, ScnCallQueueActor[Long]]
   private val sequenceExecutors = 1.to(config.numExecutor).map(i =>
-    new DefaultCallbackExecutor[Long]("sequences-executor-" + i, scn)).toList
+    new ClientCallbackExecutor[Long]("sequences-executor-" + i, scn)).toList
 
   private val timestampStackActors = new ConcurrentHashMap[String, ScnCallQueueActor[Timestamp]]
   private val timestampExecutors = 1.to(config.numExecutor).map(i =>
-    new DefaultCallbackExecutor[Timestamp]("sequences-executor-" + i, scn)).toList
+    new ClientCallbackExecutor[Timestamp]("sequences-executor-" + i, scn)).toList
 
   /**
    * Fetch timestamps
