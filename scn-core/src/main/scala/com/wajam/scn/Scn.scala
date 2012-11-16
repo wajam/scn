@@ -36,6 +36,8 @@ class Scn(serviceName: String = "scn",
   private val getNextTimestampTime = metrics.timer("scn-getnext-time", "timestamp")
   private val getNextSequenceMeter = metrics.meter("scn-getnext", "scn-getnext", "sequence")
   private val getNextTimestampMeter = metrics.meter("scn-getnext", "scn-getnext", "timestamp")
+  private val getNextSequenceCountMeter = metrics.meter("scn-getnext-count", "scn-getnext-count", "sequence")
+  private val getNextTimestampCountMeter = metrics.meter("scn-getnext-count", "scn-getnext-count", "timestamp")
 
   private val sequenceActors = new ConcurrentHashMap[String, SequenceActor[Long]]
   private val timestampActors = new ConcurrentHashMap[String, SequenceActor[Timestamp]]
@@ -49,6 +51,7 @@ class Scn(serviceName: String = "scn",
     val timer = getNextTimestampTime.timerContext()
     val name = msg.parameters("name").toString
     val nb = msg.parameters("nb").toString.toInt
+    getNextTimestampCountMeter.mark(nb)
 
     val timestampActor = timestampActors.getOrElse(name, {
       val actor = new SequenceActor[Timestamp](name, storageType match {
@@ -91,6 +94,7 @@ class Scn(serviceName: String = "scn",
     val timer = getNextSequenceTime.timerContext()
     val name = msg.parameters("name").toString
     val nb = msg.parameters("nb").toString.toInt
+    getNextSequenceCountMeter.mark(nb)
 
     val sequenceActor = sequenceActors.getOrElse(name, {
       val actor = new SequenceActor[Long](name, storageType match {
