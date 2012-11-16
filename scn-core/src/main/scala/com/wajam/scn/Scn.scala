@@ -57,7 +57,7 @@ class Scn(serviceName: String = "scn",
             name, config.timestampSaveAheadMs, config.timestampSaveAheadRenewalMs)
         case StorageType.MEMORY =>
           new InMemoryTimestampStorage()
-      })
+      }, config.maxMessageQueueSize, config.messageExpirationMs)
 
       Option(timestampActors.putIfAbsent(name, actor)).getOrElse({
         actor.start()
@@ -99,7 +99,7 @@ class Scn(serviceName: String = "scn",
             config.sequenceSaveAheadSize, config.sequenceSeeds.getOrElse(name, 1))
         case StorageType.MEMORY =>
           new InMemorySequenceStorage()
-      })
+      }, config.maxMessageQueueSize, config.messageExpirationMs)
       Option(sequenceActors.putIfAbsent(name, actor)).getOrElse({
         actor.start()
         actor

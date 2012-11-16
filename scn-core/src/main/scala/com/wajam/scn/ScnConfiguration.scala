@@ -46,6 +46,14 @@ class ScnConfiguration(config: Configuration) {
     config.getInt("scn.sequence.saveahead.unit", 1000)
   }
 
+  def getScnMessageMaxQueueSize: Int = {
+    config.getInt("scn.message.max_queue_size", 1000)
+  }
+
+  def getScnMessageExpirationMs: Int = {
+    config.getInt("scn.message.expiration.ms", 250)
+  }
+
   def getScnSequenceSeeds: Map[String, Long] = {
     val scnSequenceSeedCfg = config.subset("scn.sequence.seed")
     val keys: Seq[String] = scnSequenceSeedCfg.getKeys.asInstanceOf[java.util.Iterator[String]].toSeq
