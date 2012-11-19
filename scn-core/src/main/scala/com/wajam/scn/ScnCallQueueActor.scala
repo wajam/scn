@@ -98,6 +98,11 @@ abstract class ScnCallQueueActor[T](scn: Scn, seqName: String, seqType: String, 
                                     val executors: List[CallbackExecutor[T]])
   extends Actor with Logging with Instrumented {
 
+  private val responseTimeout = metrics.meter("scn-client-response-timeout", "scn-client-response-timeout", seqName)
+  private val queueSizeGauge = metrics.gauge[Int]("scn-client-queue-size", seqName)({
+    queue.count
+  })
+
   private val timer = new Timer
 
   protected val queue: CountedScnCallQueue[T] = CountedScnCallQueue[T](new mutable.Queue[ScnCallback[T]]())
@@ -113,6 +118,7 @@ abstract class ScnCallQueueActor[T](scn: Scn, seqName: String, seqType: String, 
     val currentTime = System.currentTimeMillis()
     while (queue.hasMore && (currentTime - queue.front.get.startTime) > timeoutInMs) {
       val callback = queue.dequeue()
+      responseTimeout.mark()
       executeCallback(callback, Left(new TimeoutException("Timed out while waiting for SCN response.")))
     }
     if (queue.count > 0) {

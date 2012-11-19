@@ -1,7 +1,5 @@
 package com.wajam.scn
 
-import org.apache.log4j.PropertyConfigurator
-import java.net.URL
 import com.wajam.nrv.zookeeper.ZookeeperClient
 import com.wajam.nrv.cluster.{Cluster, LocalNode}
 import com.wajam.nrv.zookeeper.cluster.ZookeeperClusterManager
@@ -9,20 +7,71 @@ import com.wajam.nrv.service.ActionSupportOptions
 import storage.StorageType
 import com.wajam.nrv.Logging
 import java.text.SimpleDateFormat
+import org.rogach.scallop.ScallopConf
+import org.rogach.scallop.exceptions.Help
+import org.apache.log4j.PropertyConfigurator
+import java.net.URL
 
 object ScnTestingClient extends App with Logging {
 
-  PropertyConfigurator.configureAndWatch(new URL(System.getProperty("log4j.configuration")).getFile, 5000)
-  val config = ScnConfiguration.fromSystemProperties
+  object Conf extends ScallopConf(args) {
+    banner(
+      """Usage: ./scn-core/target/start com.wajam.scn.ScnTestingClient [OPTION] TYPE NAME SERVERS
+        |A testing client that request sequence numbers to a SCN server.
+        |Examples: ./scn-core/target/start com.wajam.scn.ScnTestingClient sequence test_seq 127.0.0.1/local
+        | """.stripMargin)
 
-  val zookeeper = new ZookeeperClient(config.getNrvZookeeperServers)
+    val port = opt[Int]("port", default=Some(9695),
+      descr = "NRV local listening port. Required to connect to the cluster")
+    val workers = opt[Int]("workers", default=Some(5),
+      descr = "number of client worker threads calling an SCN client")
+    val tps = opt[Int]("tps", default=Some(50), noshort = true,
+      descr = "worker to client calls rate. This is the global rate i.e. this value is divided by the number of workers. " +
+        "This is not the real rate at which calls are reaching the server. See 'rate' option.")
+    val size = opt[Int]("size", default=Some(1),
+      descr = "number of sequence per request to SCN client.")
+    val rate = opt[Int]("rate", default=Some(10),
+      descr = "client to server wait rate in milliseconds. Calls are cummulated in the SCN client for that duration " +
+        "and then going out to the server as a single call.")
+    val timeout = opt[Int]("timeout", default=Some(1000),
+      descr = "client to server timeout. Client resend unanswered calls (see 'rate' option) until this timeout is reached")
+
+    val seqType = trailArg[String]("TYPE", descr = "sequence type. Must be 'sequence' or 'timestamp'", required = true,
+      validate = value => value match {
+        case "timestamp" => true
+        case "sequence" => true
+        case _ => false
+      })
+    val name = trailArg[String]("NAME", descr = "sequence name", required = true)
+    val servers = trailArg[String]("SERVERS", required = false, default = Some("127.0.0.1/local"),
+      descr = "comma separated host:port pairs, each corresponding to a zk server e.g. " +
+        "\"127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002\". If the optional chroot suffix " +
+        "is used the example would look like: \"127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002/app/a\" " +
+        "where the client would be rooted at \"/app/a\" and all paths would be relative to this root")
+
+    override protected def onError(e: Throwable) = e match {
+      case Help =>
+        builder.printHelp
+        sys.exit(0)
+      case _ =>
+        println("Error: %s".format(e.getMessage))
+        println()
+        builder.printHelp
+        sys.exit(1)
+    }
+
+    verify
+  }
+
+  PropertyConfigurator.configureAndWatch(new URL(System.getProperty("log4j.configuration")).getFile, 5000)
 
   // Create local node
-  val ports = Map("nrv" -> (config.getNrvListenPort + 1000))
+  val ports = Map("nrv" -> (Conf.port.apply()))
   val node = new LocalNode(ports)
   info("Local node is {}", node)
 
   // Create cluster
+  val zookeeper = new ZookeeperClient(Conf.servers.apply())
   val clusterManager = new ZookeeperClusterManager(zookeeper)
   val cluster = new Cluster(node, clusterManager, actionSupportOptions = new ActionSupportOptions())
 
@@ -34,11 +83,12 @@ object ScnTestingClient extends App with Logging {
   // Ensure cluster is ready
   Thread.sleep(500)
 
-  val scnClient = new ScnClient(scn, ScnClientConfig()).start()
+  val config = ScnClientConfig(executionRateInMs = Conf.rate.apply(), timeoutInMs = Conf.timeout.apply())
+  val scnClient = new ScnClient(scn, config).start()
 
-  val workerCount = 5
-  val targetTps = 10
-  val sequenceSize = 10
+  val workerCount = Conf.workers.apply()
+  val targetTps = Conf.tps.apply()
+  val sequenceSize = Conf.size.apply()
 
   for (i <- 1 to workerCount) {
 
@@ -56,7 +106,7 @@ object ScnTestingClient extends App with Logging {
           while (true) {
             {
               var callStart = System.currentTimeMillis
-              scnClient.fetchSequenceIds("ScnTestingClient", (sequence: Seq[Long], exception) => {
+              scnClient.fetchSequenceIds(Conf.name.apply(), (sequence: Seq[Long], exception) => {
                 exception match {
                   case Some(e) =>
                     errors += 1
