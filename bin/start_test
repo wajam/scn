@@ -5,7 +5,7 @@ cd `dirname $0`/..
 # Setting up java
 JAVA_EXEC=`which java`
 if [ "$JAVA_HOME" != "" ]; then
-		JAVA_EXEC="$JAVA_HOME/bin/java"
+                JAVA_EXEC="$JAVA_HOME/bin/java"
 fi
 
 # Setting up wajam
@@ -21,18 +21,18 @@ then
   mv "$SCN_CONSOLE_LOG" "$SCN_CONSOLE_LOG-`date +%F-%R-%N`"
 fi
 
-JAVA_XMS="1024M"
-JAVA_XMX="2048M"
+JAVA_XMS="256M"
+JAVA_XMX="512M"
 JAVA_XSS="256k"
-JAVA_XMN="512M"
-JAVA_JMX_PORT=9992
+JAVA_XMN="128M"
+JAVA_JMX_PORT=9692
 if [ "$1" != "" ]; then
-	JAVA_JMX_PORT=$(($JAVA_JMX_PORT + $1))
+        JAVA_JMX_PORT=$(($JAVA_JMX_PORT + $1))
 fi
 
 # Load per server configuration / overrides
 if [[ -f "$SCN_HOME/etc/servers/$HOSTNAME.sh" ]]; then
-	. "$SCN_HOME/etc/servers/$HOSTNAME.sh"
+        . "$SCN_HOME/etc/servers/$HOSTNAME.sh"
 fi
 
 # Java flags
@@ -40,6 +40,6 @@ JAVA_FLAGS="-Xms$JAVA_XMS -Xmx$JAVA_XMX -Xss$JAVA_XSS -Xmn$JAVA_XMN -Dcom.sun.ma
 JAVA_LOGGING="-Dlog4j.configuration=file://$SCN_HOME/etc/log4j.properties"
 SCALA_ACTOR_THREAD_POOL_SIZE="-Dactors.corePoolSize=300"
 
-#export JAVA_OPTS="$JAVA_FLAGS $JAVA_LOGGING $SCALA_ACTOR_THREAD_POOL_SIZE $1"
+export JAVA_OPTS="$JAVA_FLAGS $JAVA_LOGGING $SCALA_ACTOR_THREAD_POOL_SIZE"
 export PATH=$JAVA_EXEC:$PATH
 $SCN_HOME/scn-core/target/start com.wajam.scn.ScnTestingClient ${*:2} &> $SCN_CONSOLE_LOG

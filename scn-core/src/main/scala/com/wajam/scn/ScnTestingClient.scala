@@ -24,7 +24,7 @@ object ScnTestingClient extends App with Logging {
     val port = opt[Int]("port", default=Some(9695),
       descr = "NRV local listening port. Required to connect to the cluster")
     val workers = opt[Int]("workers", default=Some(5),
-      descr = "number of client worker threads calling an SCN client")
+      descr = "number of client worker threads calling an SCN client.")
     val tps = opt[Int]("tps", default=Some(50), noshort = true,
       descr = "worker to client calls rate. This is the global rate i.e. this value is divided by the number of workers. " +
         "This is not the real rate at which calls are reaching the server. See 'rate' option.")
@@ -97,39 +97,48 @@ object ScnTestingClient extends App with Logging {
 
     // Fetching loop
     (new Thread(new Runnable with Logging {
+      val dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+      var batchStart = System.currentTimeMillis
+      var calls, errors = 0L
+      var dur = List[Long]()
+
+      def callback(callStart: Long, exception: Option[Exception]) {
+        exception match {
+          case Some(e) =>
+            errors += 1
+          case _ =>
+        }
+
+        val now = System.currentTimeMillis
+        dur = (now - callStart) :: dur
+        calls += 1
+
+        val elapsed = now - batchStart
+        if (elapsed > 5000) {
+          val msg = "%s [%d] cnt=%d, err=%d, avr=%5.3f, med=%5.3f, min=%5.3f, max=%5.3f, tps=%5.3f".format(
+            dateFormat.format(now), i, calls, errors,
+            dur.sum/calls/1000.0, dur.sorted.toList(dur.size/2)/1000.0, dur.min/1000.0, dur.max/1000.0, calls*1000.0/elapsed)
+          dur = List[Long]()
+          calls = 0L
+          errors = 0L
+          batchStart = System.currentTimeMillis
+          println(msg)
+        }
+      }
+
       def run() {
         try {
-          val dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
-          var batchStart = System.currentTimeMillis
-          var calls, errors = 0L
-          var dur = List[Long]()
           while (true) {
             {
               var callStart = System.currentTimeMillis
-              scnClient.fetchSequenceIds(Conf.name.apply(), (sequence: Seq[Long], exception) => {
-                exception match {
-                  case Some(e) =>
-                    errors += 1
-                  case _ =>
-                }
-
-                val now = System.currentTimeMillis
-                dur = (now - callStart) :: dur
-                calls += 1
-
-                val elapsed = now - batchStart
-                if (elapsed > 5000) {
-                  val msg = "%s [%d] cnt=%d, err=%d, avr=%5.3f, med=%5.3f, min=%5.3f, max=%5.3f, tps=%5.3f".format(
-                    dateFormat.format(now), i, calls, errors,
-                    dur.sum/calls/1000.0, dur.sorted.toList(dur.size/2)/1000.0, dur.min/1000.0, dur.max/1000.0, calls*1000.0/elapsed)
-                  dur = List[Long]()
-                  calls = 0L
-                  errors = 0L
-                  batchStart = System.currentTimeMillis
-                  println(msg)
-                }
-
-              }, sequenceSize, i)
+              Conf.seqType.apply() match {
+                case "sequence" =>
+                  scnClient.fetchSequenceIds(Conf.name.apply(), (seq: Seq[Long], e) => callback(callStart, e),
+                    sequenceSize, i)
+                case "timestamp" =>
+                  scnClient.fetchTimestamps(Conf.name.apply(), (seq: Seq[Timestamp], e) => callback(callStart, e),
+                    sequenceSize, i)
+              }
             }
             Thread.sleep(1000 / targetTps * workerCount)
           }
