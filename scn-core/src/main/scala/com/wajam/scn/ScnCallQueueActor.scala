@@ -77,7 +77,7 @@ class ScnTimestampCallQueueActor(scn: Scn, seqName: String, execRateInMs: Int, t
       debug("Exception while fetching timestamps. {}", optException.get)
     } else if (Timestamp(response.head.toString.toLong).compareTo(lastAllocated) < 1) {
       responseOutdated.mark()
-      info("Received outdated timestamps, discarding.")
+      debug("Received outdated timestamps, discarding.")
     } else {
       var timestamps = response
       while (queue.hasMore && timestamps.size >= queue.front.get.nb) {
