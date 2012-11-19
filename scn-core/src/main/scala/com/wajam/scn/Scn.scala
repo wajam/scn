@@ -36,6 +36,7 @@ class Scn(serviceName: String = "scn",
   lazy private val nextTimestampTime = metrics.timer("scn-getnext-time", "timestamp")
   lazy private val nextSequenceCalls = metrics.meter("scn-getnext-calls", "scn-getnext-calls", "sequence")
   lazy private val nextTimestampCalls = metrics.meter("scn-getnext-calls", "scn-getnext-calls", "timestamp")
+
   lazy private val nextSequenceSuccess = metrics.meter("scn-getnext-success", "scn-getnext-success", "sequence")
   lazy private val nextTimestampSuccess = metrics.meter("scn-getnext-success", "scn-getnext-success", "timestamp")
   lazy private val nextSequenceError = metrics.meter("scn-getnext-error", "scn-getnext-error", "sequence")
@@ -76,11 +77,11 @@ class Scn(serviceName: String = "scn",
       e match {
         case Some(ex) =>
           msg.replyWithError(ex)
-          nextSequenceError.mark()
+          nextTimestampError.mark()
         case _ =>
           val hdr = Map("name" -> name, "sequence" -> seq)
           msg.reply(hdr)
-          nextSequenceSuccess.mark()
+          nextTimestampSuccess.mark()
       }
       timer.stop()
     }, nb)
@@ -120,11 +121,11 @@ class Scn(serviceName: String = "scn",
       e match {
         case Some(ex) =>
           msg.replyWithError(ex)
-          nextTimestampError.mark()
+          nextSequenceError.mark()
         case _ =>
           val hdr = Map("name" -> name, "sequence" -> seq)
           msg.reply(hdr)
-          nextTimestampSuccess.mark()
+          nextSequenceSuccess.mark()
       }
       timer.stop()
     }, nb)
@@ -138,7 +139,4 @@ class Scn(serviceName: String = "scn",
         cb(Nil, optException)
     })
   }
-
 }
-
-
