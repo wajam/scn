@@ -20,11 +20,15 @@ class SequenceActor[T <% Comparable[T]](name: String, storage: ScnStorage[T],
   }
 
   def next(cb: (List[T], Option[Exception]) => Unit, nb: Int) {
-    if (mailboxSize > maxQueueSize) {
-      // Overflowing messages are not dropped (at least not yet!)
+    val queueSize = mailboxSize
+    if (queueSize < maxQueueSize) {
+      this !(cb, nb, currentTime)
+    } else {
       overflow.mark()
+      val e = new Exception("Message queue overflow (%d > %d)".format(
+        queueSize, maxQueueSize))
+      cb(List[T](), Some(e))
     }
-    this !(cb, nb, currentTime)
   }
 
   def act() {
