@@ -87,7 +87,7 @@ class TestSCNClient extends FunSuite with MockitoSugar with BeforeAndAfter {
         res = seq
         len += seq.length
         latch.countDown()
-      }, 10, -1)
+      }, 10, 1)
     }
 
     latch.await()

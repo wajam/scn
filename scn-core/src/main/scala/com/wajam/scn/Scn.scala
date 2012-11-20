@@ -32,8 +32,17 @@ class Scn(serviceName: String = "scn",
            storageType: StorageType.Value = StorageType.ZOOKEEPER,
            zookeeperClient: Option[ZookeeperClient] = None) = this(serviceName, None, config, storageType, zookeeperClient)
 
-  private val metricGetNextSequence = metrics.timer("scn-getnext-sequence")
-  private val metricGetNextTimestamp = metrics.timer("scn-getnext-timestamp")
+  lazy private val nextSequenceTime = metrics.timer("scn-getnext-time", "sequence")
+  lazy private val nextTimestampTime = metrics.timer("scn-getnext-time", "timestamp")
+  lazy private val nextSequenceCalls = metrics.meter("scn-getnext-calls", "scn-getnext-calls", "sequence")
+  lazy private val nextTimestampCalls = metrics.meter("scn-getnext-calls", "scn-getnext-calls", "timestamp")
+
+  lazy private val nextSequenceSuccess = metrics.meter("scn-getnext-success", "scn-getnext-success", "sequence")
+  lazy private val nextTimestampSuccess = metrics.meter("scn-getnext-success", "scn-getnext-success", "timestamp")
+  lazy private val nextSequenceError = metrics.meter("scn-getnext-error", "scn-getnext-error", "sequence")
+  lazy private val nextTimestampError = metrics.meter("scn-getnext-error", "scn-getnext-error", "timestamp")
+  lazy private val nextSequenceCallsSize = metrics.meter("scn-getnext-calls-size", "scn-getnext-calls-size", "sequence")
+  lazy private val nextTimestampCallsSize = metrics.meter("scn-getnext-calls-size", "scn-getnext-calls-size", "timestamp")
 
   private val sequenceActors = new ConcurrentHashMap[String, SequenceActor[Long]]
   private val timestampActors = new ConcurrentHashMap[String, SequenceActor[Timestamp]]
@@ -43,30 +52,39 @@ class Scn(serviceName: String = "scn",
     throw new IllegalArgumentException("Zookeeper storage type require ZookeeperClient argument.")
 
   private[scn] val nextTimestamp = this.registerAction(new Action("/timestamp/:name/next", msg => {
-    this.metricGetNextTimestamp.time {
-      val name = msg.parameters("name").toString
-      val nb = msg.parameters("nb").toString.toInt
+    nextTimestampCalls.mark()
+    val timer = nextTimestampTime.timerContext()
+    val name = msg.parameters("name").toString
+    val nb = msg.parameters("nb").toString.toInt
+    nextTimestampCallsSize.mark(nb)
 
-      val timestampActor = timestampActors.getOrElse(name, {
-        val actor = new SequenceActor[Timestamp](storageType match {
-          case StorageType.ZOOKEEPER =>
-            new ZookeeperTimestampStorage(zookeeperClient.get,
-              name, config.timestampSaveAheadMs, config.timestampSaveAheadRenewalMs)
-          case StorageType.MEMORY =>
-            new InMemoryTimestampStorage()
-        })
+    val timestampActor = timestampActors.getOrElse(name, {
+      val actor = new SequenceActor[Timestamp](name, storageType match {
+        case StorageType.ZOOKEEPER =>
+          new ZookeeperTimestampStorage(zookeeperClient.get,
+            name, config.timestampSaveAheadMs, config.timestampSaveAheadRenewalMs)
+        case StorageType.MEMORY =>
+          new InMemoryTimestampStorage()
+      }, config.maxMessageQueueSize, config.messageExpirationMs)
 
-        Option(timestampActors.putIfAbsent(name, actor)).getOrElse({
-          actor.start()
-          actor
-        })
+      Option(timestampActors.putIfAbsent(name, actor)).getOrElse({
+        actor.start()
+        actor
       })
+    })
 
-      timestampActor.next(seq => {
-        val hdr = Map("name" -> name, "sequence" -> seq)
-        msg.reply(hdr)
-      }, nb)
-    }
+    timestampActor.next((seq, e) => {
+      e match {
+        case Some(ex) =>
+          nextTimestampError.mark()
+          msg.replyWithError(ex)
+        case _ =>
+          nextTimestampSuccess.mark()
+          val hdr = Map("name" -> name, "sequence" -> seq)
+          msg.reply(hdr)
+      }
+      timer.stop()
+    }, nb)
   }))
 
   private[scn] def getNextTimestamp(name: String, cb: (Seq[Timestamp], Option[Exception]) => Unit, nb: Int) {
@@ -79,29 +97,38 @@ class Scn(serviceName: String = "scn",
   }
 
   private[scn] val nextSequence = this.registerAction(new Action("/sequence/:name/next", msg => {
-    this.metricGetNextSequence.time {
-      val name = msg.parameters("name").toString
-      val nb = msg.parameters("nb").toString.toInt
+    nextSequenceCalls.mark()
+    val timer = nextSequenceTime.timerContext()
+    val name = msg.parameters("name").toString
+    val nb = msg.parameters("nb").toString.toInt
+    nextSequenceCallsSize.mark(nb)
 
-      val sequenceActor = sequenceActors.getOrElse(name, {
-        val actor = new SequenceActor[Long](storageType match {
-          case StorageType.ZOOKEEPER =>
-            new ZookeeperSequenceStorage(zookeeperClient.get, name,
-              config.sequenceSaveAheadSize, config.sequenceSeeds.getOrElse(name, 1))
-          case StorageType.MEMORY =>
-            new InMemorySequenceStorage()
-        })
-        Option(sequenceActors.putIfAbsent(name, actor)).getOrElse({
-          actor.start()
-          actor
-        })
+    val sequenceActor = sequenceActors.getOrElse(name, {
+      val actor = new SequenceActor[Long](name, storageType match {
+        case StorageType.ZOOKEEPER =>
+          new ZookeeperSequenceStorage(zookeeperClient.get, name,
+            config.sequenceSaveAheadSize, config.sequenceSeeds.getOrElse(name, 1))
+        case StorageType.MEMORY =>
+          new InMemorySequenceStorage()
+      }, config.maxMessageQueueSize, config.messageExpirationMs)
+      Option(sequenceActors.putIfAbsent(name, actor)).getOrElse({
+        actor.start()
+        actor
       })
+    })
 
-      sequenceActor.next(seq => {
-        val hdr = Map("name" -> name, "sequence" -> seq)
-        msg.reply(hdr)
-      }, nb)
-    }
+    sequenceActor.next((seq, e) => {
+      e match {
+        case Some(ex) =>
+          nextSequenceError.mark()
+          msg.replyWithError(ex)
+        case _ =>
+          nextSequenceSuccess.mark()
+          val hdr = Map("name" -> name, "sequence" -> seq)
+          msg.reply(hdr)
+      }
+      timer.stop()
+    }, nb)
   }))
 
   private[scn] def getNextSequence(name: String, cb: (Seq[Long], Option[Exception]) => Unit, nb: Int) {
@@ -112,7 +139,4 @@ class Scn(serviceName: String = "scn",
         cb(Nil, optException)
     })
   }
-
 }
-
-

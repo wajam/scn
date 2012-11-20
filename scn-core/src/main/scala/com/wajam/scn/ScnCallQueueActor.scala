@@ -9,6 +9,8 @@ import com.wajam.nrv.tracing.Traced
 import java.util.concurrent.TimeUnit
 import util.Random
 import com.wajam.nrv.service.Resolver
+import com.yammer.metrics.scala.Instrumented
+import math._
 
 /**
  * Actor that batches scn calls to get sequence numbers. It periodically call scn to get sequence numbers and then
@@ -20,10 +22,12 @@ import com.wajam.nrv.service.Resolver
  */
 class ScnSequenceCallQueueActor(scn: Scn, seqName: String, executionRateInMs: Int, timeoutInMs: Int,
                                 executors: List[CallbackExecutor[Long]])
-  extends ScnCallQueueActor[Long](scn, seqName, "sequence", executionRateInMs, timeoutInMs, executors) {
+  extends ScnCallQueueActor[Long](scn, seqName, "sequence", executionRateInMs, timeoutInMs, executors) with Instrumented {
 
   def this(scn: Scn, seqName: String, executionRateInMs: Int, timeoutInMs: Int, callbackExecutor: CallbackExecutor[Long]) =
     this(scn, seqName, executionRateInMs, timeoutInMs, List(callbackExecutor))
+
+  private val responseError = metrics.meter("scn-client-response-error", "scn-client-response-error", seqName)
 
   protected def scnMethod = {
     scn.getNextSequence _
@@ -31,7 +35,8 @@ class ScnSequenceCallQueueActor(scn: Scn, seqName: String, executionRateInMs: In
 
   override protected[scn] def executeScnResponse(response: Seq[Long], optException: Option[Exception]) {
     if (optException.isDefined) {
-      warn("Exception while fetching sequence numbers. {}", optException.get)
+      responseError.mark()
+      debug("Exception while fetching sequence numbers. {}", optException.get)
     } else {
       var sequenceNumbers = response
       while (queue.hasMore && sequenceNumbers.size >= queue.front.get.nb) {
@@ -58,6 +63,9 @@ class ScnTimestampCallQueueActor(scn: Scn, seqName: String, execRateInMs: Int, t
   def this(scn: Scn, seqName: String, execRateInMs: Int, timeoutInMs: Int, callbackExecutor: CallbackExecutor[Timestamp]) =
     this(scn, seqName, execRateInMs, timeoutInMs, List(callbackExecutor))
 
+  private val responseError = metrics.meter("scn-client-response-error", "scn-client-response-error", seqName)
+  private val responseOutdated = metrics.meter("scn-client-response-outdated", "scn-client-response-outdated", seqName)
+
   private var lastAllocated: Timestamp = TimestampUtil.MIN
 
   protected def scnMethod = {
@@ -66,9 +74,11 @@ class ScnTimestampCallQueueActor(scn: Scn, seqName: String, execRateInMs: Int, t
 
   override protected[scn] def executeScnResponse(response: Seq[Timestamp], optException: Option[Exception]) {
     if (optException.isDefined) {
-      warn("Exception while fetching timestamps. {}", optException.get)
+      responseError.mark()
+      debug("Exception while fetching timestamps. {}", optException.get)
     } else if (Timestamp(response.head.toString.toLong).compareTo(lastAllocated) < 1) {
-      info("Received outdated timestamps, discarding.")
+      responseOutdated.mark()
+      debug("Received outdated timestamps, discarding.")
     } else {
       var timestamps = response
       while (queue.hasMore && timestamps.size >= queue.front.get.nb) {
@@ -87,7 +97,12 @@ class ScnTimestampCallQueueActor(scn: Scn, seqName: String, execRateInMs: Int, t
  */
 abstract class ScnCallQueueActor[T](scn: Scn, seqName: String, seqType: String, execRateInMs: Int, timeoutInMs: Int,
                                     val executors: List[CallbackExecutor[T]])
-  extends Actor with Logging with Traced {
+  extends Actor with Logging with Instrumented {
+
+  private val responseTimeout = metrics.meter("scn-client-response-timeout", "scn-client-response-timeout", seqName)
+  private val queueSizeGauge = metrics.gauge[Int]("scn-client-queue-size", seqName)({
+    queue.count
+  })
 
   private val timer = new Timer
 
@@ -104,6 +119,7 @@ abstract class ScnCallQueueActor[T](scn: Scn, seqName: String, seqType: String, 
     val currentTime = System.currentTimeMillis()
     while (queue.hasMore && (currentTime - queue.front.get.startTime) > timeoutInMs) {
       val callback = queue.dequeue()
+      responseTimeout.mark()
       executeCallback(callback, Left(new TimeoutException("Timed out while waiting for SCN response.")))
     }
     if (queue.count > 0) {
@@ -117,22 +133,30 @@ abstract class ScnCallQueueActor[T](scn: Scn, seqName: String, seqType: String, 
 
   protected[scn] def executeCallback(cb: ScnCallback[T], response: Either[Exception, Seq[T]]) {
     val token = if (cb.token >= 0) cb.token else Random.nextLong() % Resolver.MAX_TOKEN
-    executors((token % executors.size).toInt).executeCallback(cb, response)
+    executors(abs((token % executors.size).toInt)).executeCallback(cb, response)
   }
 
   def act() {
     loop {
       react {
         case toBatch: Batched[T] =>
-          batch(toBatch.cb)
+          try {
+            batch(toBatch.cb)
+          } catch {
+            case e: Exception => warn("Got an error on SCN batch {}", e)
+          }
         case Execute() =>
           try {
             execute()
           } catch {
-            case e: Exception => error("Got an error in SCN call queue actor {}", e)
+            case e: Exception => warn("Got an error on SCN call {}", e)
           }
         case ExecuteOnScnResponse(response: Seq[T], error: Option[Exception]) =>
-          executeScnResponse(response, error)
+          try {
+            executeScnResponse(response, error)
+          } catch {
+            case e: Exception => warn("Got an error on SCN response {}", e)
+          }
         case _ => throw new UnsupportedOperationException()
       }
     }
@@ -186,8 +210,8 @@ trait CallbackExecutor[T] {
  * Default implementation that reset the trace context and call the callback.
  * The callback is executed in an actor message loop.
  */
-class DefaultCallbackExecutor[T](name: String, scn: Scn) extends Actor with CallbackExecutor[T] with Traced with Logging {
-  val scnResponseTimer = tracedTimer(name + "-callback")
+class ClientCallbackExecutor[T](name: String, scn: Scn) extends Actor with CallbackExecutor[T] with Traced with Logging {
+  val scnResponseTimer = tracedTimer("scn-client-callback-time")
 
   def queueSize = mailboxSize
 
