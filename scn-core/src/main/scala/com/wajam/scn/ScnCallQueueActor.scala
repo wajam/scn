@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit
 import util.Random
 import com.wajam.nrv.service.Resolver
 import com.yammer.metrics.scala.Instrumented
+import math._
 
 /**
  * Actor that batches scn calls to get sequence numbers. It periodically call scn to get sequence numbers and then
@@ -132,22 +133,30 @@ abstract class ScnCallQueueActor[T](scn: Scn, seqName: String, seqType: String, 
 
   protected[scn] def executeCallback(cb: ScnCallback[T], response: Either[Exception, Seq[T]]) {
     val token = if (cb.token >= 0) cb.token else Random.nextLong() % Resolver.MAX_TOKEN
-    executors((token % executors.size).toInt).executeCallback(cb, response)
+    executors(abs((token % executors.size).toInt)).executeCallback(cb, response)
   }
 
   def act() {
     loop {
       react {
         case toBatch: Batched[T] =>
-          batch(toBatch.cb)
+          try {
+            batch(toBatch.cb)
+          } catch {
+            case e: Exception => warn("Got an error on SCN batch {}", e)
+          }
         case Execute() =>
           try {
             execute()
           } catch {
-            case e: Exception => error("Got an error in SCN call queue actor {}", e)
+            case e: Exception => warn("Got an error on SCN call {}", e)
           }
         case ExecuteOnScnResponse(response: Seq[T], error: Option[Exception]) =>
-          executeScnResponse(response, error)
+          try {
+            executeScnResponse(response, error)
+          } catch {
+            case e: Exception => warn("Got an error on SCN response {}", e)
+          }
         case _ => throw new UnsupportedOperationException()
       }
     }
