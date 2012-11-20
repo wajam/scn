@@ -76,12 +76,12 @@ class Scn(serviceName: String = "scn",
     timestampActor.next((seq, e) => {
       e match {
         case Some(ex) =>
-          msg.replyWithError(ex)
           nextTimestampError.mark()
+          msg.replyWithError(ex)
         case _ =>
+          nextTimestampSuccess.mark()
           val hdr = Map("name" -> name, "sequence" -> seq)
           msg.reply(hdr)
-          nextTimestampSuccess.mark()
       }
       timer.stop()
     }, nb)
@@ -120,12 +120,12 @@ class Scn(serviceName: String = "scn",
     sequenceActor.next((seq, e) => {
       e match {
         case Some(ex) =>
-          msg.replyWithError(ex)
           nextSequenceError.mark()
+          msg.replyWithError(ex)
         case _ =>
+          nextSequenceSuccess.mark()
           val hdr = Map("name" -> name, "sequence" -> seq)
           msg.reply(hdr)
-          nextSequenceSuccess.mark()
       }
       timer.stop()
     }, nb)
