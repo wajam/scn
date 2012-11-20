@@ -14,6 +14,7 @@ object ScnBuild extends Build {
     "Oracle Maven2 Repo" at "http://download.oracle.com/maven",
     "Sonatype" at "http://oss.sonatype.org/content/repositories/release",
     "Cloudera" at "https://repository.cloudera.com/artifactory/cloudera-repos/",
+    "Scallop" at "http://mvnrepository.com/",
     "Wajam" at "http://ci1.is.wajam/"
   )
 
@@ -28,6 +29,7 @@ object ScnBuild extends Build {
     "com.wajam" %% "nrv-ext-scribe" % "0.1-SNAPSHOT",
     "com.yammer.metrics" %% "metrics-scala" % "2.1.2",
     "com.yammer.metrics" % "metrics-graphite" % "2.1.2",
+    "org.rogach" %% "scallop" % "0.6.0",
     "org.scalatest" %% "scalatest" % "1.7.1" % "test,it",
     "junit" % "junit" % "4.10" % "test,it",
     "org.mockito" % "mockito-core" % "1.9.0" % "test,it"

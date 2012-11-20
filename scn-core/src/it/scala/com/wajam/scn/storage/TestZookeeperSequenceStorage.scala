@@ -5,7 +5,7 @@ import org.junit.runner.RunWith
 import com.wajam.nrv.zookeeper.ZookeeperClient
 import org.scalatest.{BeforeAndAfter, FunSuite}
 import org.scalatest.matchers.ShouldMatchers._
-import com.wajam.nrv.utils.Future
+import com.wajam.nrv.utils.{ControlableCurrentTime, Future}
 import com.wajam.scn.storage.ZookeeperSequenceStorage._
 
 
@@ -123,4 +123,36 @@ class TestZookeeperSequenceStorage extends FunSuite with BeforeAndAfter {
     zkCLients.foreach(_.close())
   }
 
+  test("dynamicaly increase save ahead") {
+
+    val storage = new ZookeeperSequenceStorage(zkClient, seqName, batchSize, seqSeed) with ControlableCurrentTime
+    def getZkValue = zkClient.getLong(sequencePath(seqName))
+
+    // Requested count is much less than min save ahead, should increment using min save ahead
+    val initialZkValue = getZkValue
+    storage.next(1)
+    val zkValue1 = getZkValue
+    zkValue1 should be (initialZkValue + batchSize)
+    storage.next(1)
+    getZkValue should be (zkValue1)
+
+    // Request more than save ahead in the last 10 seconds (2 buckets of 5 secs), should increment > min save ahead
+    var seq1 = storage.next(batchSize)
+    val zkValue2 = getZkValue
+    zkValue2 should be > (zkValue1 + batchSize)
+    storage.next((zkValue2 - seq1.max - 2).toInt)
+    getZkValue should be (zkValue2)
+
+    // Skip more than 5 seconds in time with a small count to flush the current bucket
+    storage.currentTime += 70000
+    val seq2 = storage.next(1)
+    getZkValue should be (zkValue2)
+    seq2.max should be (getZkValue - 1)
+
+    // Skip again in time to flush the previous bucket. Requested count is much less than min save ahead and
+    // should increment using min save ahead again
+    storage.currentTime += 70000
+    storage.next(1)
+    getZkValue should be (zkValue2 + batchSize)
+  }
 }

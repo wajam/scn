@@ -1,0 +1,45 @@
+#!/bin/bash
+
+cd `dirname $0`/..
+
+# Setting up java
+JAVA_EXEC=`which java`
+if [ "$JAVA_HOME" != "" ]; then
+                JAVA_EXEC="$JAVA_HOME/bin/java"
+fi
+
+# Setting up wajam
+HOSTNAME=`uname -n` | awk '{print tolower($0)}'
+SCN_HOME=`pwd`
+SCN_LOG_DIR="$SCN_HOME/logs"
+SCN_CONSOLE_LOG="$SCN_LOG_DIR/console$1.log"
+
+# Create wajam log dir, rotate old
+mkdir -p $SCN_LOG_DIR
+if [ -e $SCN_CONSOLE_LOG ]
+then
+  mv "$SCN_CONSOLE_LOG" "$SCN_CONSOLE_LOG-`date +%F-%R-%N`"
+fi
+
+JAVA_XMS="256M"
+JAVA_XMX="512M"
+JAVA_XSS="256k"
+JAVA_XMN="128M"
+JAVA_JMX_PORT=9692
+if [ "$1" != "" ]; then
+        JAVA_JMX_PORT=$(($JAVA_JMX_PORT + $1))
+fi
+
+# Load per server configuration / overrides
+if [[ -f "$SCN_HOME/etc/servers/$HOSTNAME.sh" ]]; then
+        . "$SCN_HOME/etc/servers/$HOSTNAME.sh"
+fi
+
+# Java flags
+JAVA_FLAGS="-Xms$JAVA_XMS -Xmx$JAVA_XMX -Xss$JAVA_XSS -Xmn$JAVA_XMN -Dcom.sun.management.jmxremote.port=$JAVA_JMX_PORT -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Djava.net.preferIPv4Stack=true -XX:+UseCompressedOops -Dnetworkaddress.cache.negative.ttl=0 -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"
+JAVA_LOGGING="-Dlog4j.configuration=file://$SCN_HOME/etc/log4j.properties"
+SCALA_ACTOR_THREAD_POOL_SIZE="-Dactors.corePoolSize=300"
+
+export JAVA_OPTS="$JAVA_FLAGS $JAVA_LOGGING $SCALA_ACTOR_THREAD_POOL_SIZE"
+export PATH=$JAVA_EXEC:$PATH
+$SCN_HOME/scn-core/target/start com.wajam.scn.ScnTestingClient ${*:2} &> $SCN_CONSOLE_LOG
