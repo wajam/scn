@@ -1,4 +1,6 @@
-package com.wajam.scn
+package com.wajam.scn.storage
+
+import com.wajam.scn.Timestamp
 
 /**
  * Timestamp used to represent mutation time on storage

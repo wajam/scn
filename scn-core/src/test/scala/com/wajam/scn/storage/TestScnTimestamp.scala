@@ -1,4 +1,4 @@
-package com.wajam.scn
+package com.wajam.scn.storage
 
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner

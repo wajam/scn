@@ -1,5 +1,7 @@
 package com.wajam.scn
 
+import storage.ScnTimestamp
+
 /**
  * Describe a timestamp
  */

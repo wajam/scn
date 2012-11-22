@@ -14,6 +14,13 @@ import org.mockito.Matchers
 import org.scalatest.mock.MockitoSugar
 import collection.mutable
 
+/**
+ * Description
+ *
+ * @author : Jerome Gagnon <jerome@wajam.com>
+ * @copyright Copyright (c) Wajam inc.
+ *
+ */
 @RunWith(classOf[JUnitRunner])
 class TestScnClient extends FunSuite with MockitoSugar with BeforeAndAfter {
 

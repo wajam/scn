@@ -1,6 +1,6 @@
 package com.wajam.scn.storage
 
-import com.wajam.scn.{ScnTimestamp, SequenceRange, Timestamp}
+import com.wajam.scn.{SequenceRange, Timestamp}
 import com.wajam.nrv.utils.CurrentTime
 
 /**
