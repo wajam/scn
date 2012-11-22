@@ -1,23 +1,24 @@
-package com.wajam.scn
+package com.wajam.scn.client
 
-import java.util.{TimerTask, Timer}
-import com.wajam.nrv.{TimeoutException, Logging}
-import actors.Actor
-import scala.collection.mutable
-import storage.TimestampUtil
 import com.wajam.nrv.tracing.Traced
+import com.wajam.scn.Timestamp
 import java.util.concurrent.TimeUnit
+import com.wajam.scn.Scn
+import actors.Actor
+import com.wajam.nrv.{TimeoutException, Logging}
+import com.yammer.metrics.scala.Instrumented
+import java.util.{TimerTask, Timer}
+import collection.mutable
 import util.Random
 import com.wajam.nrv.service.Resolver
-import com.yammer.metrics.scala.Instrumented
 import math._
+import scala.Left
 
 /**
  * Actor that batches scn calls to get sequence numbers. It periodically call scn to get sequence numbers and then
  * assign those sequence numbers to the caller in order.
  *
  * @author : Jerome Gagnon <jerome@wajam.com>
- * @copyright Copyright (c) Wajam inc.
  *
  */
 class ScnSequenceCallQueueActor(scn: Scn, seqName: String, executionRateInMs: Int, timeoutInMs: Int,
@@ -53,7 +54,6 @@ class ScnSequenceCallQueueActor(scn: Scn, seqName: String, executionRateInMs: In
  * assign those timestamp numbers to the caller in order.
  *
  * @author : Jerome Gagnon <jerome@wajam.com>
- * @copyright Copyright (c) Wajam inc.
  *
  */
 class ScnTimestampCallQueueActor(scn: Scn, seqName: String, execRateInMs: Int, timeoutInMs: Int,
@@ -66,7 +66,7 @@ class ScnTimestampCallQueueActor(scn: Scn, seqName: String, execRateInMs: Int, t
   private val responseError = metrics.meter("scn-client-response-error", "scn-client-response-error", seqName)
   private val responseOutdated = metrics.meter("scn-client-response-outdated", "scn-client-response-outdated", seqName)
 
-  private var lastAllocated: Timestamp = TimestampUtil.MIN
+  private var lastAllocated: Timestamp = Timestamp.MIN
 
   protected def scnMethod = {
     scn.getNextTimestamp _
@@ -243,10 +243,3 @@ class ClientCallbackExecutor[T](name: String, scn: Scn) extends Actor with Callb
     this ! Callback(cb, response)
   }
 }
-
-
-
-
-
-
-

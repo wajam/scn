@@ -1,4 +1,4 @@
-package com.wajam.scn
+package com.wajam.scn.client
 
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
@@ -8,6 +8,7 @@ import org.mockito.Mockito._
 import org.mockito.{Matchers, ArgumentCaptor}
 import scala.collection.JavaConversions._
 import com.wajam.nrv.TimeoutException
+import com.wajam.scn.{Timestamp, MockScn}
 
 /**
  *
@@ -33,7 +34,7 @@ class TestScnTimestampCallQueueActor extends FunSuite with BeforeAndAfter with M
 
     timestampActor.batch(expectedCallback)
     timestampActor.execute()
-    waitForActorToProcess
+    waitForActorToProcess()
     verify(mockCallbackExecutor).executeCallback(expectedCallback, Right(expectedTimestamp))
   }
 
@@ -43,7 +44,7 @@ class TestScnTimestampCallQueueActor extends FunSuite with BeforeAndAfter with M
     mockScn.nextTimestampSeq = expectedTimestamp
     timestampActor.batch(expectedCallback)
     timestampActor.execute()
-    waitForActorToProcess
+    waitForActorToProcess()
     verify(mockCallbackExecutor).executeCallback(expectedCallback, Right(expectedTimestamp))
   }
 
@@ -56,14 +57,14 @@ class TestScnTimestampCallQueueActor extends FunSuite with BeforeAndAfter with M
     //execute get an exception, nothing should happen
     mockScn.exception = Some(new Exception)
     timestampActor.execute()
-    waitForActorToProcess
+    waitForActorToProcess()
     verifyZeroInteractions(mockCallbackExecutor)
 
     //now get a response
     mockScn.exception = None
     mockScn.nextTimestampSeq = expectedTimestamp
     timestampActor.execute()
-    waitForActorToProcess
+    waitForActorToProcess()
     verify(mockCallbackExecutor).executeCallback(expectedCallback, Right(expectedTimestamp))
   }
 
@@ -79,7 +80,7 @@ class TestScnTimestampCallQueueActor extends FunSuite with BeforeAndAfter with M
     val callbackCaptor: ArgumentCaptor[ScnCallback[Timestamp]] = ArgumentCaptor.forClass(ScnCallback.getClass).asInstanceOf[ArgumentCaptor[ScnCallback[Timestamp]]]
     val sequenceCaptor: ArgumentCaptor[Either[Exception, Seq[Timestamp]]] = ArgumentCaptor.forClass(Either.getClass).asInstanceOf[ArgumentCaptor[Either[Exception, Seq[Timestamp]]]]
     timestampActor.execute()
-    waitForActorToProcess
+    waitForActorToProcess()
 
     verify(mockCallbackExecutor, times(2)).executeCallback(callbackCaptor.capture(), sequenceCaptor.capture())
     assert(callbackCaptor.getAllValues.toList === Seq(expectedFirstCallback, expectedSecondCallback).toList)
@@ -98,7 +99,7 @@ class TestScnTimestampCallQueueActor extends FunSuite with BeforeAndAfter with M
     val sequenceCaptor1: ArgumentCaptor[Either[Exception, Seq[Timestamp]]] = ArgumentCaptor.forClass(Either.getClass).asInstanceOf[ArgumentCaptor[Either[Exception, Seq[Timestamp]]]]
     timestampActor.execute()
     timestampActor.execute() //simulate receive the same sequence twice
-    waitForActorToProcess
+    waitForActorToProcess()
 
     verify(mockCallbackExecutor, times(1)).executeCallback(callbackCaptor1.capture(), sequenceCaptor1.capture())
     assert(callbackCaptor1.getAllValues.toList === Seq(expectedFirstCallback).toList)
@@ -111,7 +112,7 @@ class TestScnTimestampCallQueueActor extends FunSuite with BeforeAndAfter with M
     val callbackCaptor2: ArgumentCaptor[ScnCallback[Timestamp]] = ArgumentCaptor.forClass(ScnCallback.getClass).asInstanceOf[ArgumentCaptor[ScnCallback[Timestamp]]]
     val sequenceCaptor2: ArgumentCaptor[Either[Exception, Seq[Timestamp]]] = ArgumentCaptor.forClass(Either.getClass).asInstanceOf[ArgumentCaptor[Either[Exception, Seq[Timestamp]]]]
     timestampActor.execute()
-    waitForActorToProcess
+    waitForActorToProcess()
 
     verify(mockCallbackExecutor, times(1)).executeCallback(callbackCaptor2.capture(), sequenceCaptor2.capture())
     assert(callbackCaptor2.getAllValues.toList === Seq(expectedSecondCallback).toList)
@@ -122,7 +123,8 @@ class TestScnTimestampCallQueueActor extends FunSuite with BeforeAndAfter with M
   test("degenerate case when asking for 0 timestamp") {
     intercept[IllegalArgumentException] {
       timestampActor.batch(ScnCallback[Timestamp]((seq: Seq[Timestamp], ex: Option[Exception]) => {
-        assert(false)
+        // This check is probably useless since this code would be called from another thread
+        fail("Should not be here!")
       }, 0))
     }
   }
@@ -134,14 +136,14 @@ class TestScnTimestampCallQueueActor extends FunSuite with BeforeAndAfter with M
 
     timestampActor.batch(expectedCallback)
     timestampActor.execute()
-    waitForActorToProcess
+    waitForActorToProcess()
 
     verify(mockCallbackExecutor).executeCallback(Matchers.eq(expectedCallback), sequenceCaptor.capture())
     assert(sequenceCaptor.getValue.isLeft)
     assert(sequenceCaptor.getValue.left.get.isInstanceOf[TimeoutException])
   }
 
-  private def waitForActorToProcess {
+  private def waitForActorToProcess() {
     Thread.sleep(100)
   }
 }

@@ -1,5 +1,6 @@
 package com.wajam.scn
 
+import client.{ScnClientConfig, ScnClient}
 import com.wajam.nrv.zookeeper.ZookeeperClient
 import com.wajam.nrv.cluster.{Cluster, LocalNode}
 import com.wajam.nrv.zookeeper.cluster.ZookeeperClusterManager

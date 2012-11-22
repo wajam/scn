@@ -25,16 +25,8 @@ object ScnTimestamp {
 
     new ScnTimestamp(timevalue * 10000 + seq)
   }
-}
 
-@Deprecated()
-object TimestampUtil {
-  val MIN_SEQ_NO = 0
-  val MAX_SEQ_NO = 9999
-
-  val now = ScnTimestamp(System.currentTimeMillis(), MIN_SEQ_NO)
-
-  def MAX = ScnTimestamp(Long.MaxValue, MAX_SEQ_NO)
-
-  def MIN = ScnTimestamp(0, MIN_SEQ_NO)
+  def now = ScnTimestamp(System.currentTimeMillis(), ScnTimestamp.MIN_SEQ_NO)
+  val MIN = ScnTimestamp(0, ScnTimestamp.MIN_SEQ_NO)
+  val MAX = ScnTimestamp(Long.MaxValue / 10000 - 1, ScnTimestamp.MAX_SEQ_NO)
 }

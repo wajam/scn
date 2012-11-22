@@ -1,13 +1,14 @@
-package com.wajam.scn
+package com.wajam.scn.client
 
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.{BeforeAndAfter, FunSuite}
 import org.scalatest.mock.MockitoSugar
 import org.mockito.Mockito._
-import org.mockito.{Matchers, Mockito, ArgumentCaptor}
+import org.mockito.{Matchers, ArgumentCaptor}
 import scala.collection.JavaConversions._
 import com.wajam.nrv.TimeoutException
+import com.wajam.scn.MockScn
 
 /**
  * 
@@ -33,7 +34,7 @@ class TestScnSequenceCallQueueActor extends FunSuite with BeforeAndAfter with Mo
     sequenceActor.batch(expectedCallback)
     sequenceActor.execute()
 
-    waitForActorToProcess
+    waitForActorToProcess()
 
     verify(mockCallbackExecutor).executeCallback(expectedCallback, Right(expectedSequence))
   }
@@ -45,7 +46,7 @@ class TestScnSequenceCallQueueActor extends FunSuite with BeforeAndAfter with Mo
     sequenceActor.batch(expectedCallback)
     sequenceActor.execute()
 
-    waitForActorToProcess
+    waitForActorToProcess()
 
     verify(mockCallbackExecutor).executeCallback(expectedCallback, Right(expectedSequence))
   }
@@ -59,7 +60,7 @@ class TestScnSequenceCallQueueActor extends FunSuite with BeforeAndAfter with Mo
     mockScn.exception = Some(new Exception)
     sequenceActor.execute()
 
-    waitForActorToProcess
+    waitForActorToProcess()
 
     verifyZeroInteractions(mockCallbackExecutor)
 
@@ -68,7 +69,7 @@ class TestScnSequenceCallQueueActor extends FunSuite with BeforeAndAfter with Mo
     mockScn.nextSequenceSeq = expectedSequence
     sequenceActor.execute()
 
-    waitForActorToProcess
+    waitForActorToProcess()
 
     verify(mockCallbackExecutor).executeCallback(expectedCallback, Right(expectedSequence))
   }
@@ -89,7 +90,7 @@ class TestScnSequenceCallQueueActor extends FunSuite with BeforeAndAfter with Mo
 
     sequenceActor.execute()
 
-    waitForActorToProcess
+    waitForActorToProcess()
 
     verify(mockCallbackExecutor, times(2)).executeCallback(callbackCaptor.capture(), sequenceCaptor.capture())
 
@@ -100,7 +101,8 @@ class TestScnSequenceCallQueueActor extends FunSuite with BeforeAndAfter with Mo
   test("degenerate case when asking for 0 sequence number") {
     intercept[IllegalArgumentException] {
       sequenceActor.batch(ScnCallback[Long]((seq: Seq[Long], ex: Option[Exception]) => {
-        assert(false)
+        // This check is probably useless since this code would be called from another thread
+        fail("Should not be here!")
       }, 0))
     }
   }
@@ -113,14 +115,14 @@ class TestScnSequenceCallQueueActor extends FunSuite with BeforeAndAfter with Mo
 
     sequenceActor.batch(expectedCallback)
     sequenceActor.execute()
-    waitForActorToProcess
+    waitForActorToProcess()
 
     verify(mockCallbackExecutor).executeCallback(Matchers.eq(expectedCallback), sequenceCaptor.capture())
     assert(sequenceCaptor.getValue.isLeft)
     assert(sequenceCaptor.getValue.left.get.isInstanceOf[TimeoutException])
   }
 
-  private def waitForActorToProcess {
+  private def waitForActorToProcess() {
     Thread.sleep(100)
   }
 
