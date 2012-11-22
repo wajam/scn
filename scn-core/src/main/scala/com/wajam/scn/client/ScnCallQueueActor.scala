@@ -1,7 +1,6 @@
 package com.wajam.scn.client
 
 import com.wajam.nrv.tracing.Traced
-import com.wajam.scn.storage.TimestampUtil
 import com.wajam.scn.Timestamp
 import java.util.concurrent.TimeUnit
 import com.wajam.scn.Scn
@@ -218,7 +217,7 @@ class ScnTimestampCallQueueActor(scn: Scn, seqName: String, execRateInMs: Int, t
   private val responseError = metrics.meter("scn-client-response-error", "scn-client-response-error", seqName)
   private val responseOutdated = metrics.meter("scn-client-response-outdated", "scn-client-response-outdated", seqName)
 
-  private var lastAllocated: Timestamp = TimestampUtil.MIN
+  private var lastAllocated: Timestamp = Timestamp.MIN
 
   protected def scnMethod = {
     scn.getNextTimestamp _

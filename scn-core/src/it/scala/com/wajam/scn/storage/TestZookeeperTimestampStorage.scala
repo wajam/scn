@@ -7,6 +7,7 @@ import org.scalatest.{BeforeAndAfter, FunSuite}
 import org.scalatest.matchers.ShouldMatchers._
 import com.wajam.nrv.utils.{CurrentTime, ControlableCurrentTime}
 import com.wajam.scn.storage.ZookeeperTimestampStorage._
+import com.wajam.scn.ScnTimestamp
 
 @RunWith(classOf[JUnitRunner])
 class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {

@@ -2,7 +2,7 @@ package com.wajam.scn.storage
 
 import com.wajam.nrv.zookeeper.ZookeeperClient
 import com.wajam.nrv.zookeeper.ZookeeperClient._
-import com.wajam.scn.{SequenceRange, Timestamp}
+import com.wajam.scn.{ScnTimestamp, SequenceRange, Timestamp}
 import com.wajam.nrv.Logging
 import com.wajam.nrv.utils.CurrentTime
 import org.apache.zookeeper.data.Stat

@@ -1,8 +1,9 @@
-package com.wajam.scn.storage
+package com.wajam.scn
 
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.FunSuite
+import org.scalatest.matchers.ShouldMatchers._
 
 @RunWith(classOf[JUnitRunner])
 class TestScnTimestamp extends FunSuite {
@@ -15,6 +16,10 @@ class TestScnTimestamp extends FunSuite {
       case ob: IndexOutOfBoundsException => // Success
       case _: Exception => fail() // Fail on other exceptions
     }
+  }
+
+  test("max should be greater than min") {
+    ScnTimestamp.MAX.value should be > (ScnTimestamp.MIN.value)
   }
 
 }
