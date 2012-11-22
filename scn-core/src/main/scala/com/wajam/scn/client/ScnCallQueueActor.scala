@@ -1,96 +1,19 @@
-package com.wajam.scn
+package com.wajam.scn.client
 
-import java.util.{TimerTask, Timer}
-import com.wajam.nrv.{TimeoutException, Logging}
-import actors.Actor
-import scala.collection.mutable
-import storage.TimestampUtil
 import com.wajam.nrv.tracing.Traced
+import com.wajam.scn.storage.TimestampUtil
+import com.wajam.scn.Timestamp
 import java.util.concurrent.TimeUnit
+import com.wajam.scn.Scn
+import actors.Actor
+import com.wajam.nrv.{TimeoutException, Logging}
+import com.yammer.metrics.scala.Instrumented
+import java.util.{TimerTask, Timer}
+import collection.mutable
 import util.Random
 import com.wajam.nrv.service.Resolver
-import com.yammer.metrics.scala.Instrumented
 import math._
-
-/**
- * Actor that batches scn calls to get sequence numbers. It periodically call scn to get sequence numbers and then
- * assign those sequence numbers to the caller in order.
- *
- * @author : Jerome Gagnon <jerome@wajam.com>
- * @copyright Copyright (c) Wajam inc.
- *
- */
-class ScnSequenceCallQueueActor(scn: Scn, seqName: String, executionRateInMs: Int, timeoutInMs: Int,
-                                executors: List[CallbackExecutor[Long]])
-  extends ScnCallQueueActor[Long](scn, seqName, "sequence", executionRateInMs, timeoutInMs, executors) with Instrumented {
-
-  def this(scn: Scn, seqName: String, executionRateInMs: Int, timeoutInMs: Int, callbackExecutor: CallbackExecutor[Long]) =
-    this(scn, seqName, executionRateInMs, timeoutInMs, List(callbackExecutor))
-
-  private val responseError = metrics.meter("scn-client-response-error", "scn-client-response-error", seqName)
-
-  protected def scnMethod = {
-    scn.getNextSequence _
-  }
-
-  override protected[scn] def executeScnResponse(response: Seq[Long], optException: Option[Exception]) {
-    if (optException.isDefined) {
-      responseError.mark()
-      debug("Exception while fetching sequence numbers. {}", optException.get)
-    } else {
-      var sequenceNumbers = response
-      while (queue.hasMore && sequenceNumbers.size >= queue.front.get.nb) {
-        val scnCb = queue.dequeue()
-        executeCallback(scnCb, Right(sequenceNumbers.take(scnCb.nb)))
-        sequenceNumbers = sequenceNumbers.drop(scnCb.nb)
-      }
-    }
-  }
-}
-
-/**
- * Actor that batches scn calls to get timestamps. It periodically call scn to get timestamps and then
- * assign those timestamp numbers to the caller in order.
- *
- * @author : Jerome Gagnon <jerome@wajam.com>
- * @copyright Copyright (c) Wajam inc.
- *
- */
-class ScnTimestampCallQueueActor(scn: Scn, seqName: String, execRateInMs: Int, timeoutInMs: Int,
-                                 executors: List[CallbackExecutor[Timestamp]])
-  extends ScnCallQueueActor[Timestamp](scn, seqName, "timestamps", execRateInMs, timeoutInMs, executors) {
-
-  def this(scn: Scn, seqName: String, execRateInMs: Int, timeoutInMs: Int, callbackExecutor: CallbackExecutor[Timestamp]) =
-    this(scn, seqName, execRateInMs, timeoutInMs, List(callbackExecutor))
-
-  private val responseError = metrics.meter("scn-client-response-error", "scn-client-response-error", seqName)
-  private val responseOutdated = metrics.meter("scn-client-response-outdated", "scn-client-response-outdated", seqName)
-
-  private var lastAllocated: Timestamp = TimestampUtil.MIN
-
-  protected def scnMethod = {
-    scn.getNextTimestamp _
-  }
-
-  override protected[scn] def executeScnResponse(response: Seq[Timestamp], optException: Option[Exception]) {
-    if (optException.isDefined) {
-      responseError.mark()
-      debug("Exception while fetching timestamps. {}", optException.get)
-    } else if (Timestamp(response.head.toString.toLong).compareTo(lastAllocated) < 1) {
-      responseOutdated.mark()
-      debug("Received outdated timestamps, discarding.")
-    } else {
-      var timestamps = response
-      while (queue.hasMore && timestamps.size >= queue.front.get.nb) {
-        val scnCb = queue.dequeue()
-        val allocatedTimeStamps = timestamps.take(scnCb.nb)
-        executeCallback(scnCb, Right(allocatedTimeStamps))
-        lastAllocated = allocatedTimeStamps.last
-        timestamps = timestamps.drop(scnCb.nb)
-      }
-    }
-  }
-}
+import scala.Left
 
 /**
  * Base class for call queue actors.
@@ -183,15 +106,8 @@ abstract class ScnCallQueueActor[T](scn: Scn, seqName: String, seqType: String, 
 // used to batch a scn call
 case class Batched[T](cb: ScnCallback[T])
 
-// used to periodically execute call to Scn
-case class Execute()
-
 // used to execute the Scn callback from the caller
 case class Callback[T](cb: ScnCallback[T], response: Either[Exception, Seq[T]])
-
-// used to execute the Scn response and dispatch to the callers
-case class ExecuteOnScnResponse[T](response: Seq[T], error: Option[Exception])
-
 
 /**
  * Callback executor interface. This interface executes the callback from the caller.
@@ -244,9 +160,86 @@ class ClientCallbackExecutor[T](name: String, scn: Scn) extends Actor with Callb
   }
 }
 
+// used to periodically execute call to Scn
+case class Execute()
 
+// used to execute the Scn response and dispatch to the callers
+case class ExecuteOnScnResponse[T](response: Seq[T], error: Option[Exception])
 
+/**
+ * Actor that batches scn calls to get sequence numbers. It periodically call scn to get sequence numbers and then
+ * assign those sequence numbers to the caller in order.
+ *
+ * @author : Jerome Gagnon <jerome@wajam.com>
+ *
+ */
+class ScnSequenceCallQueueActor(scn: Scn, seqName: String, executionRateInMs: Int, timeoutInMs: Int,
+                                executors: List[CallbackExecutor[Long]])
+  extends ScnCallQueueActor[Long](scn, seqName, "sequence", executionRateInMs, timeoutInMs, executors) with Instrumented {
 
+  def this(scn: Scn, seqName: String, executionRateInMs: Int, timeoutInMs: Int, callbackExecutor: CallbackExecutor[Long]) =
+    this(scn, seqName, executionRateInMs, timeoutInMs, List(callbackExecutor))
 
+  private val responseError = metrics.meter("scn-client-response-error", "scn-client-response-error", seqName)
 
+  protected def scnMethod = {
+    scn.getNextSequence _
+  }
 
+  override protected[scn] def executeScnResponse(response: Seq[Long], optException: Option[Exception]) {
+    if (optException.isDefined) {
+      responseError.mark()
+      debug("Exception while fetching sequence numbers. {}", optException.get)
+    } else {
+      var sequenceNumbers = response
+      while (queue.hasMore && sequenceNumbers.size >= queue.front.get.nb) {
+        val scnCb = queue.dequeue()
+        executeCallback(scnCb, Right(sequenceNumbers.take(scnCb.nb)))
+        sequenceNumbers = sequenceNumbers.drop(scnCb.nb)
+      }
+    }
+  }
+}
+
+/**
+ * Actor that batches scn calls to get timestamps. It periodically call scn to get timestamps and then
+ * assign those timestamp numbers to the caller in order.
+ *
+ * @author : Jerome Gagnon <jerome@wajam.com>
+ *
+ */
+class ScnTimestampCallQueueActor(scn: Scn, seqName: String, execRateInMs: Int, timeoutInMs: Int,
+                                 executors: List[CallbackExecutor[Timestamp]])
+  extends ScnCallQueueActor[Timestamp](scn, seqName, "timestamps", execRateInMs, timeoutInMs, executors) {
+
+  def this(scn: Scn, seqName: String, execRateInMs: Int, timeoutInMs: Int, callbackExecutor: CallbackExecutor[Timestamp]) =
+    this(scn, seqName, execRateInMs, timeoutInMs, List(callbackExecutor))
+
+  private val responseError = metrics.meter("scn-client-response-error", "scn-client-response-error", seqName)
+  private val responseOutdated = metrics.meter("scn-client-response-outdated", "scn-client-response-outdated", seqName)
+
+  private var lastAllocated: Timestamp = TimestampUtil.MIN
+
+  protected def scnMethod = {
+    scn.getNextTimestamp _
+  }
+
+  override protected[scn] def executeScnResponse(response: Seq[Timestamp], optException: Option[Exception]) {
+    if (optException.isDefined) {
+      responseError.mark()
+      debug("Exception while fetching timestamps. {}", optException.get)
+    } else if (Timestamp(response.head.toString.toLong).compareTo(lastAllocated) < 1) {
+      responseOutdated.mark()
+      debug("Received outdated timestamps, discarding.")
+    } else {
+      var timestamps = response
+      while (queue.hasMore && timestamps.size >= queue.front.get.nb) {
+        val scnCb = queue.dequeue()
+        val allocatedTimeStamps = timestamps.take(scnCb.nb)
+        executeCallback(scnCb, Right(allocatedTimeStamps))
+        lastAllocated = allocatedTimeStamps.last
+        timestamps = timestamps.drop(scnCb.nb)
+      }
+    }
+  }
+}

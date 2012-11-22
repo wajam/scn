@@ -1,5 +1,6 @@
 package com.wajam.scn
 
+import client.{ScnClientConfig, ScnClient}
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import org.mockito.Matchers._
@@ -13,15 +14,8 @@ import org.mockito.Matchers
 import org.scalatest.mock.MockitoSugar
 import collection.mutable
 
-/**
- * Description
- *
- * @author : Jerome Gagnon <jerome@wajam.com>
- * @copyright Copyright (c) Wajam inc.
- *
- */
 @RunWith(classOf[JUnitRunner])
-class TestSCNClient extends FunSuite with MockitoSugar with BeforeAndAfter {
+class TestScnClient extends FunSuite with MockitoSugar with BeforeAndAfter {
 
   var scn: Scn = null
   var scnClient: ScnClient = null

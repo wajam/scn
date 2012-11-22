@@ -1,5 +1,6 @@
 package com.wajam.scn
 
+import client.{ScnClientConfig, ScnClient}
 import org.scalatest.{BeforeAndAfter, FunSuite}
 import storage.StorageType
 import com.wajam.nrv.cluster.{Node, Cluster, LocalNode, TestingClusterInstance}

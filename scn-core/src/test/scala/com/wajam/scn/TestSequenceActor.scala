@@ -8,7 +8,7 @@ import storage.{ScnStorage, InMemorySequenceStorage}
 import org.scalatest.mock.MockitoSugar
 import org.mockito.Mockito._
 import org.scalatest.matchers.ShouldMatchers._
-import com.wajam.nrv.utils.{CurrentTime, ControlableCurrentTime}
+import com.wajam.nrv.utils.CurrentTime
 
 @RunWith(classOf[JUnitRunner])
 class TestSequenceActor extends FunSuite with BeforeAndAfter with MockitoSugar {
@@ -17,7 +17,7 @@ class TestSequenceActor extends FunSuite with BeforeAndAfter with MockitoSugar {
 
   before {
     storage = new InMemorySequenceStorage
-    actor = new SequenceActor[Long]("test", storage)
+    actor = new SequenceActor[Long]("test", storage, maxQueueSize = 5000, messageExpirationMs = 5000)
     actor.start()
   }
 

@@ -1,15 +1,15 @@
-package com.wajam.scn
+package com.wajam.scn.client
 
 import com.yammer.metrics.scala.Instrumented
 import java.util.concurrent._
 import scala.collection.JavaConversions._
+import com.wajam.scn.{Timestamp, Scn}
 
 /**
  * Scn client that front the SCN service and batches Scn calls to avoid excessive round trips between the
  * service requesting Scn timestamps/sequence ids and the Scn server.
  *
  * @author : Jerome Gagnon <jerome@wajam.com>
- * @copyright Copyright (c) Wajam inc.
  *
  */
 class ScnClient(scn: Scn, config: ScnClientConfig = ScnClientConfig()) extends Instrumented {
