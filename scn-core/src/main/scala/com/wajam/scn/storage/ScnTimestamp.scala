@@ -28,5 +28,5 @@ object ScnTimestamp {
 
   def now = ScnTimestamp(System.currentTimeMillis(), ScnTimestamp.MIN_SEQ_NO)
   val MIN = ScnTimestamp(0, ScnTimestamp.MIN_SEQ_NO)
-  val MAX = ScnTimestamp(Long.MaxValue / 10000 - 1, ScnTimestamp.MAX_SEQ_NO)
+  val MAX = ScnTimestamp(Long.MaxValue)
 }
