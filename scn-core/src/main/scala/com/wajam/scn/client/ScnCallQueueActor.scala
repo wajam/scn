@@ -120,7 +120,8 @@ abstract class ScnCallQueueActor[T](scn: Scn, seqName: String, seqType: String, 
     while (queue.hasMore && (currentTime - queue.front.get.startTime) > timeoutInMs) {
       val callback = queue.dequeue()
       responseTimeout.mark()
-      executeCallback(callback, Left(new TimeoutException("Timed out while waiting for SCN response.")))
+      val elapsed = currentTime - callback.startTime
+      executeCallback(callback, Left(new TimeoutException("Timed out while waiting for SCN response.", Some(elapsed))))
     }
     if (queue.count > 0) {
       scnMethod(seqName, (seq: Seq[T], optException: Option[Exception]) => {
