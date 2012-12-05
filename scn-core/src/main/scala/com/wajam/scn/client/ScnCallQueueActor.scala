@@ -57,7 +57,7 @@ class ScnSequenceCallQueueActor(scn: Scn, seqName: String, executionRateInMs: In
  */
 class ScnTimestampCallQueueActor(scn: Scn, seqName: String, execRateInMs: Int, timeoutInMs: Int,
                                  executors: List[CallbackExecutor[Timestamp]])
-  extends ScnCallQueueActor[Timestamp, Timestamp](scn, seqName, "timestamps", execRateInMs, timeoutInMs, executors) {
+  extends ScnCallQueueActor[SequenceRange, Timestamp](scn, seqName, "timestamps", execRateInMs, timeoutInMs, executors) {
 
   def this(scn: Scn, seqName: String, execRateInMs: Int, timeoutInMs: Int, callbackExecutor: CallbackExecutor[Timestamp]) =
     this(scn, seqName, execRateInMs, timeoutInMs, List(callbackExecutor))
@@ -71,15 +71,15 @@ class ScnTimestampCallQueueActor(scn: Scn, seqName: String, execRateInMs: Int, t
     scn.getNextTimestamp _
   }
 
-  override protected[scn] def executeScnResponse(response: Seq[Timestamp], optException: Option[Exception]) {
+  override protected[scn] def executeScnResponse(response: Seq[SequenceRange], optException: Option[Exception]) {
     if (optException.isDefined) {
       responseError.mark()
       debug("Exception while fetching timestamps. {}", optException.get)
-    } else if (Timestamp(response.head.toString.toLong).compareTo(lastAllocated) < 1) {
+    } else if (Timestamp(response.head.from).compareTo(lastAllocated) < 1) {
       responseOutdated.mark()
       debug("Received outdated timestamps, discarding.")
     } else {
-      var timestamps = response
+      var timestamps = Timestamp.ranges2timestamps(response)
       while (queue.hasMore && timestamps.size >= queue.front.get.nb) {
         val scnCb = queue.dequeue()
         val allocatedTimeStamps = timestamps.take(scnCb.nb)

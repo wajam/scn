@@ -7,6 +7,7 @@ import org.scalatest.{BeforeAndAfter, FunSuite}
 import org.scalatest.matchers.ShouldMatchers._
 import com.wajam.nrv.utils.{CurrentTime, ControlableCurrentTime}
 import com.wajam.scn.storage.ZookeeperTimestampStorage._
+import com.wajam.scn.Timestamp
 
 @RunWith(classOf[JUnitRunner])
 class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
@@ -32,7 +33,7 @@ class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
   }
 
   test("increment") {
-    val range = storage.next(10)
+    val range: List[Timestamp] = storage.next(10)
 
     // Test the order of increment
     assert(range.sortWith((t1, t2) => t1.compareTo(t2) == -1) == range, range)
@@ -40,12 +41,18 @@ class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
   }
 
   test("unicity of generated ids") {
-    val unique = storage.next(10) ::: storage.next(20) ::: storage.next(30)
+    val unique = Timestamp.ranges2timestamps(storage.next(10) ::: storage.next(20) ::: storage.next(30))
     Thread.sleep(2000)
-    val unique2 = unique ::: storage.next(20)
+    val unique2 = Timestamp.ranges2timestamps(unique ::: storage.next(20))
 
-    assert(unique2 == unique2.distinct, unique)
-    assert(unique.size === 60, unique.size)
+    unique2 should be(unique2.distinct)
+    unique.size should be(60)
+  }
+
+  test("should be expected timestamp value") {
+    val storage = new ZookeeperTimestampStorage(zkClient, tsName, 5000, 1000) with ControlableCurrentTime
+    val values: List[Timestamp] = storage.next(1)
+    values(0) should be(ScnTimestamp(storage.currentTime, 0))
   }
 
   test("counter head position in zookeeper") {
@@ -63,7 +70,7 @@ class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
   test("storage with drifting clock") {
     val saveAheadMillis = 5000
     val inTimeStorage = new ZookeeperTimestampStorage(zkClient, tsName, saveAheadMillis, 1000)
-    val onTime = inTimeStorage.next(1)
+    val onTime: List[Timestamp] = inTimeStorage.next(1)
 
     val otherStorage = new ZookeeperTimestampStorage(zkClient, tsName, saveAheadMillis, 1000) with ControlableCurrentTime
 
@@ -80,7 +87,7 @@ class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
 
     // Test other storage again after advancing one minute + save ahead
     otherStorage.currentTime += (60 * 1000 + saveAheadMillis)
-    val backOnTime = otherStorage.next(1)
+    val backOnTime: List[Timestamp] = otherStorage.next(1)
 
     onTime(0) should be < (backOnTime(0))
   }

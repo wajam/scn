@@ -45,7 +45,7 @@ class Scn(serviceName: String = "scn",
   lazy private val nextTimestampCallsSize = metrics.meter("scn-getnext-calls-size", "scn-getnext-calls-size", "timestamp")
 
   private val sequenceActors = new ConcurrentHashMap[String, SequenceActor[SequenceRange]]
-  private val timestampActors = new ConcurrentHashMap[String, SequenceActor[Timestamp]]
+  private val timestampActors = new ConcurrentHashMap[String, SequenceActor[SequenceRange]]
 
   // Construction argument validation
   if (storageType.eq(StorageType.ZOOKEEPER) && zookeeperClient == None)
@@ -59,13 +59,14 @@ class Scn(serviceName: String = "scn",
     nextTimestampCallsSize.mark(nb)
 
     val timestampActor = timestampActors.getOrElse(name, {
-      val actor = new SequenceActor[Timestamp](name, storageType match {
+      val storage: ScnStorage[SequenceRange] = storageType match {
         case StorageType.ZOOKEEPER =>
           new ZookeeperTimestampStorage(zookeeperClient.get,
             name, config.timestampSaveAheadMs, config.timestampSaveAheadRenewalMs)
         case StorageType.MEMORY =>
           new InMemoryTimestampStorage()
-      }, config.maxMessageQueueSize, config.messageExpirationMs)
+      }
+      val actor = new SequenceActor[SequenceRange](name, storage, config.maxMessageQueueSize, config.messageExpirationMs)
 
       Option(timestampActors.putIfAbsent(name, actor)).getOrElse({
         actor.start()
@@ -87,10 +88,10 @@ class Scn(serviceName: String = "scn",
     }, nb)
   }))
 
-  private[scn] def getNextTimestamp(name: String, cb: (Seq[Timestamp], Option[Exception]) => Unit, nb: Int) {
+  private[scn] def getNextTimestamp(name: String, cb: (Seq[SequenceRange], Option[Exception]) => Unit, nb: Int) {
     this.nextTimestamp.call(params = Map("name" -> name, "nb" -> nb), onReply = (respMsg, optException) => {
       if (optException.isEmpty)
-        cb(respMsg.parameters("sequence").asInstanceOf[Seq[Timestamp]], None)
+        cb(respMsg.parameters("sequence").asInstanceOf[Seq[SequenceRange]], None)
       else
         cb(Nil, optException)
     })
