@@ -44,7 +44,7 @@ class Scn(serviceName: String = "scn",
   lazy private val nextSequenceCallsSize = metrics.meter("scn-getnext-calls-size", "scn-getnext-calls-size", "sequence")
   lazy private val nextTimestampCallsSize = metrics.meter("scn-getnext-calls-size", "scn-getnext-calls-size", "timestamp")
 
-  private val sequenceActors = new ConcurrentHashMap[String, SequenceActor[Long]]
+  private val sequenceActors = new ConcurrentHashMap[String, SequenceActor[SequenceRange]]
   private val timestampActors = new ConcurrentHashMap[String, SequenceActor[Timestamp]]
 
   // Construction argument validation
@@ -104,13 +104,14 @@ class Scn(serviceName: String = "scn",
     nextSequenceCallsSize.mark(nb)
 
     val sequenceActor = sequenceActors.getOrElse(name, {
-      val actor = new SequenceActor[Long](name, storageType match {
+      val storage: ScnStorage[SequenceRange] = storageType match {
         case StorageType.ZOOKEEPER =>
           new ZookeeperSequenceStorage(zookeeperClient.get, name,
             config.sequenceSaveAheadSize, config.sequenceSeeds.getOrElse(name, 1))
         case StorageType.MEMORY =>
           new InMemorySequenceStorage()
-      }, config.maxMessageQueueSize, config.messageExpirationMs)
+      }
+      val actor = new SequenceActor[SequenceRange](name, storage, config.maxMessageQueueSize, config.messageExpirationMs)
       Option(sequenceActors.putIfAbsent(name, actor)).getOrElse({
         actor.start()
         actor
@@ -131,10 +132,10 @@ class Scn(serviceName: String = "scn",
     }, nb)
   }))
 
-  private[scn] def getNextSequence(name: String, cb: (Seq[Long], Option[Exception]) => Unit, nb: Int) {
+  private[scn] def getNextSequence(name: String, cb: (Seq[SequenceRange], Option[Exception]) => Unit, nb: Int) {
     this.nextSequence.call(params = Map("name" -> name, "nb" -> nb), onReply = (respMsg, optException) => {
       if (optException.isEmpty)
-        cb(respMsg.parameters("sequence").asInstanceOf[Seq[Long]], None)
+        cb(respMsg.parameters("sequence").asInstanceOf[Seq[SequenceRange]], None)
       else
         cb(Nil, optException)
     })

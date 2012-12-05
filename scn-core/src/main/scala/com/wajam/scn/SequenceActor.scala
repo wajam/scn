@@ -9,7 +9,7 @@ import com.wajam.nrv.utils.CurrentTime
 /**
  * Actor that receives sequence requests and returns sequence numbers
  */
-class SequenceActor[T <% Comparable[T]](name: String, storage: ScnStorage[T],
+class SequenceActor[T](name: String, storage: ScnStorage[T],
                                         maxQueueSize: Long = 1000, messageExpirationMs: Long = 250)
   extends Actor with Instrumented with CurrentTime {
 
