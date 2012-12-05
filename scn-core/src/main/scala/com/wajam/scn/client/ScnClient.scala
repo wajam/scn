@@ -35,7 +35,7 @@ class ScnClient(scn: Scn, config: ScnClientConfig = ScnClientConfig()) extends I
   private val sequenceExecutors = 1.to(config.numExecutor).map(i =>
     new ClientCallbackExecutor[Long]("sequences-executor-" + i, scn)).toList
 
-  private val timestampStackActors = new ConcurrentHashMap[String, ScnCallQueueActor[Timestamp, Timestamp]]
+  private val timestampStackActors = new ConcurrentHashMap[String, ScnCallQueueActor[SequenceRange, Timestamp]]
   private val timestampExecutors = 1.to(config.numExecutor).map(i =>
     new ClientCallbackExecutor[Timestamp]("sequences-executor-" + i, scn)).toList
 

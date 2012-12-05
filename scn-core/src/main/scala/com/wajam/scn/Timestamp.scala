@@ -15,7 +15,7 @@ trait Timestamp extends Ordered[Timestamp] {
 }
 
 object Timestamp {
-  def apply(l: Long) = {
+  def apply(l: Long): Timestamp = {
     ScnTimestamp(l)
   }
 
@@ -24,4 +24,12 @@ object Timestamp {
   def MAX = ScnTimestamp.MAX
 
   implicit def timestamp2long(ts: Timestamp) = ts.value
+
+  implicit def ranges2timestamps(ranges: Seq[SequenceRange]): List[Timestamp] = {
+    SequenceRange.ranges2sequence(ranges).map(Timestamp(_))
+  }
+
+  implicit def timestamps2ranges(sequence: Seq[Timestamp]): List[SequenceRange] = {
+    SequenceRange.sequence2ranges(sequence.map(_.value))
+  }
 }

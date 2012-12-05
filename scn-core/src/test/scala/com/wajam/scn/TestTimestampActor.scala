@@ -12,12 +12,12 @@ import com.wajam.nrv.utils.CurrentTime
 
 @RunWith(classOf[JUnitRunner])
 class TestTimestampActor extends FunSuite with BeforeAndAfter with MockitoSugar {
-  var storage: ScnStorage[Timestamp] = null
-  var actor: SequenceActor[Timestamp] = null
+  var storage: ScnStorage[SequenceRange] = null
+  var actor: SequenceActor[SequenceRange] = null
 
   before {
     storage = new InMemoryTimestampStorage
-    actor = new SequenceActor[Timestamp]("test", storage)
+    actor = new SequenceActor[SequenceRange]("test", storage)
     actor.start()
   }
 
@@ -27,7 +27,7 @@ class TestTimestampActor extends FunSuite with BeforeAndAfter with MockitoSugar 
     val latch = new CountDownLatch(1)
 
     actor.next((values, e) => {
-      results = results ::: values
+      results = results ::: Timestamp.ranges2timestamps(values)
       latch.countDown()
     }, 100)
 
@@ -46,7 +46,7 @@ class TestTimestampActor extends FunSuite with BeforeAndAfter with MockitoSugar 
     var results = List[Timestamp]()
 
     actor.next((values, e) => {
-      results = values
+      results = Timestamp.ranges2timestamps(values)
       latch.countDown()
     }, 10)
 
@@ -58,10 +58,10 @@ class TestTimestampActor extends FunSuite with BeforeAndAfter with MockitoSugar 
   test("error resume") {
     val expectedException = new RuntimeException()
 
-    storage  = mock[ScnStorage[Timestamp]]
+    storage  = mock[ScnStorage[SequenceRange]]
     when(storage.next(2)).thenThrow(expectedException)
-    when(storage.next(1)).thenReturn(List(Timestamp(1L)))
-    actor = new SequenceActor[Timestamp]("test", storage)
+    when(storage.next(1)).thenReturn(List(SequenceRange(1, 2)))
+    actor = new SequenceActor[SequenceRange]("test", storage)
     actor.start()
 
     val latch = new CountDownLatch(2)
@@ -74,7 +74,7 @@ class TestTimestampActor extends FunSuite with BeforeAndAfter with MockitoSugar 
 
     var results = List[Timestamp]()
     actor.next((values, e) => {
-      results = values
+      results = Timestamp.ranges2timestamps(values)
       latch.countDown()
     }, 1)
 
@@ -86,7 +86,7 @@ class TestTimestampActor extends FunSuite with BeforeAndAfter with MockitoSugar 
 
   test("drop expired message") {
     val expiration = 1000
-    actor = new SequenceActor[Timestamp]("test", storage, expiration) with CurrentTime {
+    actor = new SequenceActor[SequenceRange]("test", storage, expiration) with CurrentTime {
       var calls = 0
       // Increase time twice than expiration on every call. Should be called twice, first when queuing message and
       // later after dequeuing to process it.
