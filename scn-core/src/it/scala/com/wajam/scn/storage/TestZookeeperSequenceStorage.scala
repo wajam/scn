@@ -7,6 +7,7 @@ import org.scalatest.{BeforeAndAfter, FunSuite}
 import org.scalatest.matchers.ShouldMatchers._
 import com.wajam.nrv.utils.{ControlableCurrentTime, Future}
 import com.wajam.scn.storage.ZookeeperSequenceStorage._
+import com.wajam.scn.SequenceRange
 
 
 @RunWith(classOf[JUnitRunner])
@@ -43,12 +44,12 @@ class TestZookeeperSequenceStorage extends FunSuite with BeforeAndAfter {
     storage = new ZookeeperSequenceStorage(
       new ZookeeperClient(zkServerAddress), "it_seq_test", 100, expectedInitValue)
 
-    assert(expectedInitValue === storage.next(1)(0))
+    assert(expectedInitValue === SequenceRange.ranges2sequence(storage.next(1))(0))
   }
 
   test("increment") {
-    val seed = storage.next(1)
-    val range = storage.next(10)
+    val seed = SequenceRange.ranges2sequence(storage.next(1))
+    val range = SequenceRange.ranges2sequence(storage.next(10))
 
     assert(range.last - range.head === 9)
     assert((seed(0) + 1) === range.head)
@@ -62,7 +63,7 @@ class TestZookeeperSequenceStorage extends FunSuite with BeforeAndAfter {
     //simulate another node taking 1000 ids (100 - 1100)
     zkClient.incrementCounter(sequencePath(seqName), 1000, 0)
 
-    val ids = storage.next(100)
+    val ids = SequenceRange.ranges2sequence(storage.next(100))
 
     assert(100 === ids.length)
     assert(51 === ids(0))
@@ -78,26 +79,26 @@ class TestZookeeperSequenceStorage extends FunSuite with BeforeAndAfter {
     storage = new ZookeeperSequenceStorage(
       new ZookeeperClient(zkServerAddress), "it_seq_test", 100, seed)
 
-    val ids = storage.next(1)
+    val ids = SequenceRange.ranges2sequence(storage.next(1))
 
     assert(seed === ids(0))
   }
 
   test("unicity of generated ids") {
-    val unique = storage.next(10) ::: storage.next(20) ::: storage.next(30)
+    val unique = SequenceRange.ranges2sequence(storage.next(10) ::: storage.next(20) ::: storage.next(30))
 
     assert(unique == unique.distinct, unique)
     assert(unique.size === 60, unique.size)
   }
 
   test("get unique id if exact batchsize is used for count") {
-    val seq1 = storage.next(batchSize)
+    val seq1 = SequenceRange.ranges2sequence(storage.next(batchSize))
 
     assert(1 === seq1(0))
     assert(batchSize === seq1.length)
     assert(100 === seq1(99))
 
-    val seq2 = storage.next(1)
+    val seq2 = SequenceRange.ranges2sequence(storage.next(1))
     assert(1 === seq2.length)
     assert(101 === seq2(0))
   }
@@ -112,7 +113,7 @@ class TestZookeeperSequenceStorage extends FunSuite with BeforeAndAfter {
     val iterations = 25
     val countPerCall = 51
     val workers = storages.map(storage => Future.future({
-      for (i <- 1 to iterations) yield storage.next(countPerCall)
+      for (i <- 1 to iterations) yield SequenceRange.ranges2sequence(storage.next(countPerCall))
     }))
 
     val all = for (worker <- workers) yield Future.blocking(worker)
@@ -137,7 +138,7 @@ class TestZookeeperSequenceStorage extends FunSuite with BeforeAndAfter {
     getZkValue should be (zkValue1)
 
     // Request more than save ahead in the last 10 seconds (2 buckets of 5 secs), should increment > min save ahead
-    var seq1 = storage.next(batchSize)
+    var seq1 = SequenceRange.ranges2sequence(storage.next(batchSize))
     val zkValue2 = getZkValue
     zkValue2 should be > (zkValue1 + batchSize)
     storage.next((zkValue2 - seq1.max - 2).toInt)
@@ -145,7 +146,7 @@ class TestZookeeperSequenceStorage extends FunSuite with BeforeAndAfter {
 
     // Skip more than 5 seconds in time with a small count to flush the current bucket
     storage.currentTime += 70000
-    val seq2 = storage.next(1)
+    val seq2 = SequenceRange.ranges2sequence(storage.next(1))
     getZkValue should be (zkValue2)
     seq2.max should be (getZkValue - 1)
 

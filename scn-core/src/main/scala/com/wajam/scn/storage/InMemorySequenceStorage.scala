@@ -5,7 +5,7 @@ import com.wajam.scn.SequenceRange
 /**
  * Sequence storage that doesn't store sequence number, but keep it in memory.
  */
-class InMemorySequenceStorage extends ScnStorage[Long] {
+class InMemorySequenceStorage extends ScnStorage[SequenceRange] {
 
   private var lastSeq = SequenceRange(0, 1)
 
@@ -16,9 +16,9 @@ class InMemorySequenceStorage extends ScnStorage[Long] {
    * @param count Number of numbers asked
    * @return Inclusive from and to sequence
    */
-  def next(count: Int): List[Long] = {
+  def next(count: Int): List[SequenceRange] = {
     lastSeq = SequenceRange(lastSeq.to, lastSeq.to + count)
-    List.range(lastSeq.from, lastSeq.to)
+    List(lastSeq)
   }
 
 }

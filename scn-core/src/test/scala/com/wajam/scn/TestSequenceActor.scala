@@ -12,12 +12,12 @@ import com.wajam.nrv.utils.CurrentTime
 
 @RunWith(classOf[JUnitRunner])
 class TestSequenceActor extends FunSuite with BeforeAndAfter with MockitoSugar {
-  var storage: ScnStorage[Long] = null
-  var actor: SequenceActor[Long] = null
+  var storage: ScnStorage[SequenceRange] = null
+  var actor: SequenceActor[SequenceRange] = null
 
   before {
     storage = new InMemorySequenceStorage
-    actor = new SequenceActor[Long]("test", storage, maxQueueSize = 5000, messageExpirationMs = 5000)
+    actor = new SequenceActor[SequenceRange]("test", storage, maxQueueSize = 5000, messageExpirationMs = 5000)
     actor.start()
   }
 
@@ -26,14 +26,14 @@ class TestSequenceActor extends FunSuite with BeforeAndAfter with MockitoSugar {
 
     for (i <- 0 to 999) {
       actor.next((values, e) => {
-        results = results ::: values
+        results = results ::: SequenceRange.ranges2sequence(values)
       }, 1)
     }
 
     val latch = new CountDownLatch(1)
 
     actor.next((values, e) => {
-      results = results ::: values
+      results = results ::: SequenceRange.ranges2sequence(values)
       latch.countDown()
     }, 100)
 
@@ -84,10 +84,10 @@ class TestSequenceActor extends FunSuite with BeforeAndAfter with MockitoSugar {
   test("error resume") {
     val expectedException = new RuntimeException()
 
-    storage  = mock[ScnStorage[Long]]
+    storage  = mock[ScnStorage[SequenceRange]]
     when(storage.next(2)).thenThrow(expectedException)
     when(storage.next(1)).thenReturn(List(1L))
-    actor = new SequenceActor[Long]("test", storage)
+    actor = new SequenceActor[SequenceRange]("test", storage)
     actor.start()
 
     val latch = new CountDownLatch(2)
@@ -112,7 +112,7 @@ class TestSequenceActor extends FunSuite with BeforeAndAfter with MockitoSugar {
 
   test("drop expired message") {
     val expiration = 1000
-    actor = new SequenceActor[Long]("test", storage, expiration) with CurrentTime {
+    actor = new SequenceActor[SequenceRange]("test", storage, expiration) with CurrentTime {
       var calls = 0
       // Increase time twice than expiration on every call. Should be called twice, first when queuing message and
       // later after dequeuing to process it.

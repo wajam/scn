@@ -13,7 +13,7 @@ import com.yammer.metrics.scala.Instrumented
  * Sequence storage that stores sequences in Zookeeper
  */
 class ZookeeperSequenceStorage(zkClient: ZookeeperClient, name: String, minSaveAheadSize: Int, seed: Long = 1)
-  extends ScnStorage[Long] with CurrentTime with Instrumented {
+  extends ScnStorage[SequenceRange] with CurrentTime with Instrumented {
 
   private var availableSeq = SequenceRange(seed, seed)
   private val saveAhead = new DynamicSequenceSaveAhead(minSaveAheadSize, this)
@@ -33,11 +33,11 @@ class ZookeeperSequenceStorage(zkClient: ZookeeperClient, name: String, minSaveA
    * @param count Number of numbers asked
    * @return Inclusive from and to sequence
    */
-  def next(count: Int): List[Long] = {
+  def next(count: Int): List[SequenceRange] = {
     saveAhead.update(count)
 
     if (availableSeq.length >= count) {
-      createSequenceFromLocalAvailableSeq(count)
+      List(createSequenceFromLocalAvailableSeq(count))
     } else {
       val part1 = createSequenceFromLocalAvailableSeq(availableSeq.length.toInt)
       val countToFetchFromZookeeper = count - part1.length
@@ -51,7 +51,8 @@ class ZookeeperSequenceStorage(zkClient: ZookeeperClient, name: String, minSaveA
       }
       val to = from + countToFetchFromZookeeper
       availableSeq = SequenceRange(to, lastReservedId)
-      part1 ::: List.range(from, to)
+
+      List(part1, SequenceRange(from, to))
     }
   }
 
@@ -61,10 +62,10 @@ class ZookeeperSequenceStorage(zkClient: ZookeeperClient, name: String, minSaveA
     zkClient.incrementCounter(sequencePath(name), batchSize, seed)
   }
 
-  private def createSequenceFromLocalAvailableSeq(count: Int): List[Long] = {
+  private def createSequenceFromLocalAvailableSeq(count: Int): SequenceRange = {
     val (from, to) = (availableSeq.from, availableSeq.from + count)
     availableSeq = SequenceRange(to, availableSeq.to)
-    List.range(from, to)
+    SequenceRange(from, to)
   }
 }
 
