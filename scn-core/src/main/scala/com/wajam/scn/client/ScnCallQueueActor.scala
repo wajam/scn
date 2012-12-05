@@ -1,9 +1,8 @@
 package com.wajam.scn.client
 
 import com.wajam.nrv.tracing.Traced
-import com.wajam.scn.Timestamp
+import com.wajam.scn.{SequenceRange, Timestamp, Scn}
 import java.util.concurrent.TimeUnit
-import com.wajam.scn.Scn
 import actors.Actor
 import com.wajam.nrv.{TimeoutException, Logging}
 import com.yammer.metrics.scala.Instrumented
@@ -23,7 +22,7 @@ import scala.Left
  */
 class ScnSequenceCallQueueActor(scn: Scn, seqName: String, executionRateInMs: Int, timeoutInMs: Int,
                                 executors: List[CallbackExecutor[Long]])
-  extends ScnCallQueueActor[Long](scn, seqName, "sequence", executionRateInMs, timeoutInMs, executors) with Instrumented {
+  extends ScnCallQueueActor[SequenceRange, Long](scn, seqName, "sequence", executionRateInMs, timeoutInMs, executors) with Instrumented {
 
   def this(scn: Scn, seqName: String, executionRateInMs: Int, timeoutInMs: Int, callbackExecutor: CallbackExecutor[Long]) =
     this(scn, seqName, executionRateInMs, timeoutInMs, List(callbackExecutor))
@@ -34,12 +33,12 @@ class ScnSequenceCallQueueActor(scn: Scn, seqName: String, executionRateInMs: In
     scn.getNextSequence _
   }
 
-  override protected[scn] def executeScnResponse(response: Seq[Long], optException: Option[Exception]) {
+  override protected[scn] def executeScnResponse(response: Seq[SequenceRange], optException: Option[Exception]) {
     if (optException.isDefined) {
       responseError.mark()
       debug("Exception while fetching sequence numbers. {}", optException.get)
     } else {
-      var sequenceNumbers = response
+      var sequenceNumbers = SequenceRange.ranges2sequence(response)
       while (queue.hasMore && sequenceNumbers.size >= queue.front.get.nb) {
         val scnCb = queue.dequeue()
         executeCallback(scnCb, Right(sequenceNumbers.take(scnCb.nb)))
@@ -58,7 +57,7 @@ class ScnSequenceCallQueueActor(scn: Scn, seqName: String, executionRateInMs: In
  */
 class ScnTimestampCallQueueActor(scn: Scn, seqName: String, execRateInMs: Int, timeoutInMs: Int,
                                  executors: List[CallbackExecutor[Timestamp]])
-  extends ScnCallQueueActor[Timestamp](scn, seqName, "timestamps", execRateInMs, timeoutInMs, executors) {
+  extends ScnCallQueueActor[Timestamp, Timestamp](scn, seqName, "timestamps", execRateInMs, timeoutInMs, executors) {
 
   def this(scn: Scn, seqName: String, execRateInMs: Int, timeoutInMs: Int, callbackExecutor: CallbackExecutor[Timestamp]) =
     this(scn, seqName, execRateInMs, timeoutInMs, List(callbackExecutor))
@@ -95,8 +94,8 @@ class ScnTimestampCallQueueActor(scn: Scn, seqName: String, execRateInMs: Int, t
 /**
  * Base class for call queue actors.
  */
-abstract class ScnCallQueueActor[T](scn: Scn, seqName: String, seqType: String, execRateInMs: Int, timeoutInMs: Int,
-                                    val executors: List[CallbackExecutor[T]])
+abstract class ScnCallQueueActor[ST, CT](scn: Scn, seqName: String, seqType: String, execRateInMs: Int, timeoutInMs: Int,
+                                    val executors: List[CallbackExecutor[CT]])
   extends Actor with Logging with Instrumented {
 
   private val responseTimeout = metrics.meter("scn-client-response-timeout", "scn-client-response-timeout", seqName)
@@ -106,11 +105,11 @@ abstract class ScnCallQueueActor[T](scn: Scn, seqName: String, seqType: String, 
 
   private val timer = new Timer
 
-  protected val queue: CountedScnCallQueue[T] = CountedScnCallQueue[T](new mutable.Queue[ScnCallback[T]]())
+  protected val queue: CountedScnCallQueue[CT] = CountedScnCallQueue[CT](new mutable.Queue[ScnCallback[CT]]())
 
-  protected def scnMethod: (String, (Seq[T], Option[Exception]) => Unit, Int) => Unit
+  protected def scnMethod: (String, (Seq[ST], Option[Exception]) => Unit, Int) => Unit
 
-  protected[scn] def batch(cb: ScnCallback[T]) {
+  protected[scn] def batch(cb: ScnCallback[CT]) {
     require(cb.nb > 0)
     queue.enqueue(cb)
   }
@@ -124,15 +123,15 @@ abstract class ScnCallQueueActor[T](scn: Scn, seqName: String, seqType: String, 
       executeCallback(callback, Left(new TimeoutException("Timed out while waiting for SCN response.", Some(elapsed))))
     }
     if (queue.count > 0) {
-      scnMethod(seqName, (seq: Seq[T], optException: Option[Exception]) => {
+      scnMethod(seqName, (seq: Seq[ST], optException: Option[Exception]) => {
         this ! ExecuteOnScnResponse(if (seq == null) Seq() else seq, optException)
       }, queue.count)
     }
   }
 
-  protected[scn] def executeScnResponse(response: Seq[T], error: Option[Exception])
+  protected[scn] def executeScnResponse(response: Seq[ST], error: Option[Exception])
 
-  protected[scn] def executeCallback(cb: ScnCallback[T], response: Either[Exception, Seq[T]]) {
+  protected[scn] def executeCallback(cb: ScnCallback[CT], response: Either[Exception, Seq[CT]]) {
     val token = if (cb.token >= 0) cb.token else Random.nextLong() % Resolver.MAX_TOKEN
     executors(abs((token % executors.size).toInt)).executeCallback(cb, response)
   }
@@ -140,7 +139,7 @@ abstract class ScnCallQueueActor[T](scn: Scn, seqName: String, seqType: String, 
   def act() {
     loop {
       react {
-        case toBatch: Batched[T] =>
+        case toBatch: Batched[CT] =>
           try {
             batch(toBatch.cb)
           } catch {
@@ -152,7 +151,7 @@ abstract class ScnCallQueueActor[T](scn: Scn, seqName: String, seqType: String, 
           } catch {
             case e: Exception => warn("Got an error on SCN call {}", e)
           }
-        case ExecuteOnScnResponse(response: Seq[T], error: Option[Exception]) =>
+        case ExecuteOnScnResponse(response: Seq[ST], error: Option[Exception]) =>
           try {
             executeScnResponse(response, error)
           } catch {
@@ -182,36 +181,36 @@ abstract class ScnCallQueueActor[T](scn: Scn, seqName: String, seqType: String, 
  * Call queue actors message classes
  */
 // used to batch a scn call
-case class Batched[T](cb: ScnCallback[T])
+case class Batched[CT](cb: ScnCallback[CT])
 
 // used to periodically execute call to Scn
 case class Execute()
 
 // used to execute the Scn callback from the caller
-case class Callback[T](cb: ScnCallback[T], response: Either[Exception, Seq[T]])
+case class Callback[CT](cb: ScnCallback[CT], response: Either[Exception, Seq[CT]])
 
 // used to execute the Scn response and dispatch to the callers
-case class ExecuteOnScnResponse[T](response: Seq[T], error: Option[Exception])
+case class ExecuteOnScnResponse[ST](response: Seq[ST], error: Option[Exception])
 
 
 /**
  * Callback executor interface. This interface executes the callback from the caller.
  */
-trait CallbackExecutor[T] {
+trait CallbackExecutor[CT] {
 
   /**
    * Execute the callback
    * @param cb the callback to execute
    * @param response the response associated to the callback
    */
-  def executeCallback(cb: ScnCallback[T], response: Either[Exception, Seq[T]])
+  def executeCallback(cb: ScnCallback[CT], response: Either[Exception, Seq[CT]])
 }
 
 /**
  * Default implementation that reset the trace context and call the callback.
  * The callback is executed in an actor message loop.
  */
-class ClientCallbackExecutor[T](name: String, scn: Scn) extends Actor with CallbackExecutor[T] with Traced with Logging {
+class ClientCallbackExecutor[CT](name: String, scn: Scn) extends Actor with CallbackExecutor[CT] with Traced with Logging {
   val scnResponseTimer = tracedTimer("scn-client-callback-time")
 
   def queueSize = mailboxSize
@@ -219,7 +218,7 @@ class ClientCallbackExecutor[T](name: String, scn: Scn) extends Actor with Callb
   def act() {
     loop {
       react {
-        case callback: Callback[T] =>
+        case callback: Callback[CT] =>
           scnResponseTimer.update(System.currentTimeMillis() - callback.cb.startTime, TimeUnit.MILLISECONDS)
           scn.tracer.trace(callback.cb.context) {
             try {
@@ -240,7 +239,7 @@ class ClientCallbackExecutor[T](name: String, scn: Scn) extends Actor with Callb
     }
   }
 
-  def executeCallback(cb: ScnCallback[T], response: Either[Exception, Seq[T]]) {
+  def executeCallback(cb: ScnCallback[CT], response: Either[Exception, Seq[CT]]) {
     this ! Callback(cb, response)
   }
 }

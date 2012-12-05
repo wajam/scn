@@ -3,7 +3,7 @@ package com.wajam.scn.client
 import com.yammer.metrics.scala.Instrumented
 import java.util.concurrent._
 import scala.collection.JavaConversions._
-import com.wajam.scn.{Timestamp, Scn}
+import com.wajam.scn.{SequenceRange, Timestamp, Scn}
 
 /**
  * Scn client that front the SCN service and batches Scn calls to avoid excessive round trips between the
@@ -31,11 +31,11 @@ class ScnClient(scn: Scn, config: ScnClientConfig = ScnClientConfig()) extends I
   }
   private val metricNbCalls = metrics.counter("scn-calls")
 
-  private val sequenceStackActors = new ConcurrentHashMap[String, ScnCallQueueActor[Long]]
+  private val sequenceStackActors = new ConcurrentHashMap[String, ScnCallQueueActor[SequenceRange, Long]]
   private val sequenceExecutors = 1.to(config.numExecutor).map(i =>
     new ClientCallbackExecutor[Long]("sequences-executor-" + i, scn)).toList
 
-  private val timestampStackActors = new ConcurrentHashMap[String, ScnCallQueueActor[Timestamp]]
+  private val timestampStackActors = new ConcurrentHashMap[String, ScnCallQueueActor[Timestamp, Timestamp]]
   private val timestampExecutors = 1.to(config.numExecutor).map(i =>
     new ClientCallbackExecutor[Timestamp]("sequences-executor-" + i, scn)).toList
 
