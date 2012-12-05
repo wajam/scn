@@ -15,7 +15,7 @@ import com.wajam.scn.storage.ZookeeperTimestampStorage._
  */
 class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String, private[storage] val saveAheadInMs: Int,
                                 saveAheadRenewalInMs: Int)
-  extends ScnStorage[Timestamp] with CurrentTime with Logging {
+  extends ScnStorage[SequenceRange] with CurrentTime with Logging {
 
   zkClient.ensureAllExists(timestampPath(name), timestamp2string(-1L))
 
@@ -33,7 +33,7 @@ class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String, private
    * @param count Number of numbers askeds
    * @return Inclusive from and to sequence
    */
-  def next(count: Int): List[Timestamp] = {
+  def next(count: Int): List[SequenceRange] = {
     var reqTime = currentTime
 
     // Avoid duplicate ID with drifting *late* clock
@@ -78,7 +78,9 @@ class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String, private
     }
 
     lastTime = reqTime
-    List.range(lastSeq.from, lastSeq.to).map(l => ScnTimestamp(lastTime, l))
+    val from = ScnTimestamp(lastTime, lastSeq.from).value
+    val to = from + lastSeq.length
+    List(SequenceRange(from, to))
   }
 }
 

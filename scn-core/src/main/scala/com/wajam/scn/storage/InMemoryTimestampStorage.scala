@@ -6,7 +6,7 @@ import com.wajam.nrv.utils.CurrentTime
 /**
  * Sequence storage that doesn't storage sequence timestamps, but keep it in memory.
  */
-class InMemoryTimestampStorage extends ScnStorage[Timestamp] with CurrentTime {
+class InMemoryTimestampStorage extends ScnStorage[SequenceRange] with CurrentTime {
 
   private var lastTime = currentTime
   private var lastSeq = SequenceRange(0, 1)
@@ -18,7 +18,7 @@ class InMemoryTimestampStorage extends ScnStorage[Timestamp] with CurrentTime {
    * @param count Number of numbers asked
    * @return Inclusive from and to sequence
    */
-  def next(count: Int): List[ScnTimestamp] = {
+  def next(count: Int): List[SequenceRange] = {
     var reqTime = currentTime
 
     while (lastSeq.length != count) {
@@ -33,6 +33,9 @@ class InMemoryTimestampStorage extends ScnStorage[Timestamp] with CurrentTime {
     }
 
     lastTime = reqTime
-    List.range(lastSeq.from, lastSeq.to).map(l => ScnTimestamp(lastTime, l))
+
+    val from = ScnTimestamp(lastTime, lastSeq.from).value
+    val to = from + lastSeq.length
+    List(SequenceRange(from, to))
   }
 }
