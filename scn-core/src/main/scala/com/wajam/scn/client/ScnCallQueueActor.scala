@@ -4,7 +4,7 @@ import com.wajam.nrv.tracing.Traced
 import com.wajam.scn.{SequenceRange, Timestamp, Scn}
 import java.util.concurrent.TimeUnit
 import actors.Actor
-import com.wajam.nrv.{TimeoutException, Logging}
+import com.wajam.nrv.{UnavailableException, TimeoutException, Logging}
 import com.yammer.metrics.scala.Instrumented
 import java.util.{TimerTask, Timer}
 import collection.mutable
@@ -27,7 +27,7 @@ class ScnSequenceCallQueueActor(scn: Scn, seqName: String, executionRateInMs: In
   def this(scn: Scn, seqName: String, executionRateInMs: Int, timeoutInMs: Int, callbackExecutor: CallbackExecutor[Long]) =
     this(scn, seqName, executionRateInMs, timeoutInMs, List(callbackExecutor))
 
-  private val responseError = metrics.meter("scn-client-response-error", "scn-client-response-error", seqName)
+  private val responseError = metrics.meter("response-error", "response-error", metricName)
 
   protected def scnMethod = {
     scn.getNextSequence _
@@ -62,8 +62,8 @@ class ScnTimestampCallQueueActor(scn: Scn, seqName: String, execRateInMs: Int, t
   def this(scn: Scn, seqName: String, execRateInMs: Int, timeoutInMs: Int, callbackExecutor: CallbackExecutor[Timestamp]) =
     this(scn, seqName, execRateInMs, timeoutInMs, List(callbackExecutor))
 
-  private val responseError = metrics.meter("scn-client-response-error", "scn-client-response-error", seqName)
-  private val responseOutdated = metrics.meter("scn-client-response-outdated", "scn-client-response-outdated", seqName)
+  private val responseError = metrics.meter("response-error", "response-error", metricName)
+  private val responseOutdated = metrics.meter("response-outdated", "response-outdated", metricName)
 
   private var lastAllocated: Timestamp = Timestamp.MIN
 
@@ -98,8 +98,11 @@ abstract class ScnCallQueueActor[ST, CT](scn: Scn, seqName: String, seqType: Str
                                     val executors: List[CallbackExecutor[CT]])
   extends Actor with Logging with Instrumented {
 
-  private val responseTimeout = metrics.meter("scn-client-response-timeout", "scn-client-response-timeout", seqName)
-  private val queueSizeGauge = metrics.gauge[Int]("scn-client-queue-size", seqName)({
+  protected val metricName = seqName.replace(".", "_")
+
+  private val unavailableServer = metrics.meter("server-unavailable", "server-unavailable", metricName)
+  private val responseTimeout = metrics.meter("response-timeout", "response-timeout", metricName)
+  private val queueSizeGauge = metrics.gauge[Int]("queue-size", metricName)({
     queue.count
   })
 
@@ -149,6 +152,10 @@ abstract class ScnCallQueueActor[ST, CT](scn: Scn, seqName: String, seqType: Str
           try {
             execute()
           } catch {
+            case e: UnavailableException => {
+              unavailableServer.mark()
+              debug("Got an unvailable error on SCN call {}", e)
+            }
             case e: Exception => warn("Got an error on SCN call {}", e)
           }
         case ExecuteOnScnResponse(response: Seq[ST], error: Option[Exception]) =>
@@ -211,7 +218,7 @@ trait CallbackExecutor[CT] {
  * The callback is executed in an actor message loop.
  */
 class ClientCallbackExecutor[CT](name: String, scn: Scn) extends Actor with CallbackExecutor[CT] with Traced with Logging {
-  val scnResponseTimer = tracedTimer("scn-client-callback-time")
+  val scnResponseTimer = tracedTimer("callback-time")
 
   def queueSize = mailboxSize
 
