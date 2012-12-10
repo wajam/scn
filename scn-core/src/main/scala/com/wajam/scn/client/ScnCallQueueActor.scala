@@ -102,11 +102,17 @@ abstract class ScnCallQueueActor[ST, CT](scn: Scn, seqName: String, seqType: Str
 
   private val unavailableServer = metrics.meter("server-unavailable", "server-unavailable", metricName)
   private val responseTimeout = metrics.meter("response-timeout", "response-timeout", metricName)
+  private val executeRateTimer = metrics.timer("execute-rate", metricName)
   private val queueSizeGauge = metrics.gauge[Int]("queue-size", metricName)({
     queue.count
   })
+  private val mailboxSizeGauge = metrics.gauge[Int]("mailbox-size", metricName)({
+    mailboxSize
+  })
 
   private val timer = new Timer
+
+  private var lastExecuteTime = 0L
 
   protected val queue: CountedScnCallQueue[CT] = CountedScnCallQueue[CT](new mutable.Queue[ScnCallback[CT]]())
 
@@ -118,17 +124,35 @@ abstract class ScnCallQueueActor[ST, CT](scn: Scn, seqName: String, seqType: Str
   }
 
   protected[scn] def execute() {
-    val currentTime = System.currentTimeMillis()
-    while (queue.hasMore && (currentTime - queue.front.get.startTime) > timeoutInMs) {
-      val callback = queue.dequeue()
-      responseTimeout.mark()
-      val elapsed = currentTime - callback.startTime
-      executeCallback(callback, Left(new TimeoutException("Timed out while waiting for SCN response.", Some(elapsed))))
-    }
-    if (queue.count > 0) {
-      scnMethod(seqName, (seq: Seq[ST], optException: Option[Exception]) => {
-        this ! ExecuteOnScnResponse(if (seq == null) Seq() else seq, optException)
-      }, queue.count)
+    try {
+      val currentTime = System.currentTimeMillis()
+
+      // Monitor execution rate
+      if (lastExecuteTime > 0) {
+        executeRateTimer.update(currentTime - lastExecuteTime, TimeUnit.MILLISECONDS)
+      }
+      lastExecuteTime = currentTime
+
+      // Timeout expired queued callbacks
+      while (queue.hasMore && (currentTime - queue.front.get.startTime) > timeoutInMs) {
+        val callback = queue.dequeue()
+        responseTimeout.mark()
+        val elapsed = currentTime - callback.startTime
+        executeCallback(callback, Left(new TimeoutException("Timed out while waiting for SCN response.", Some(elapsed))))
+      }
+
+      // Call SCN for queued callbacks
+      if (queue.count > 0) {
+        scnMethod(seqName, (seq: Seq[ST], optException: Option[Exception]) => {
+          this ! ExecuteOnScnResponse(if (seq == null) Seq() else seq, optException)
+        }, queue.count)
+      }
+    } finally {
+      timer.schedule(new TimerTask {
+        def run() {
+          fullfill()
+        }
+      }, execRateInMs)
     }
   }
 
@@ -171,11 +195,7 @@ abstract class ScnCallQueueActor[ST, CT](scn: Scn, seqName: String, seqType: Str
 
   override def start(): Actor = {
     super.start()
-    timer.scheduleAtFixedRate(new TimerTask {
-      def run() {
-        fullfill()
-      }
-    }, 0, execRateInMs)
+    fullfill()
     this
   }
 
