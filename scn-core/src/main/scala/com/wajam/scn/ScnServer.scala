@@ -73,7 +73,6 @@ class ScnServer(config: ScnConfiguration) extends Logging {
       config.getEnvironment + ".scn." + node.uniqueKey.replace(".", "-"))
   }
 
-
   def start() {
     cluster.start()
   }
@@ -88,8 +87,15 @@ class ScnServer(config: ScnConfiguration) extends Logging {
   }
 }
 
-object ScnServer extends App {
-  PropertyConfigurator.configureAndWatch(new URL(System.getProperty("log4j.configuration")).getFile, 5000)
-  val config = ScnConfiguration.fromSystemProperties
-  new ScnServer(config).startAndBlock()
+object ScnServer extends App with Logging {
+  try {
+    PropertyConfigurator.configureAndWatch(new URL(System.getProperty("log4j.configuration")).getFile, 5000)
+    val config = ScnConfiguration.fromSystemProperties
+    new ScnServer(config).startAndBlock()
+  } catch {
+    case e: Exception => {
+      error("Fatal error starting Scn server.", e)
+      System.exit(1)
+    }
+  }
 }
