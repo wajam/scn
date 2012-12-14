@@ -32,7 +32,6 @@ class MockScn extends Scn(null, null, StorageType.MEMORY) with Logging {
         current
       }
     }
-    info("getNextSequence: head={}, tail={}", nextSeq, nextSequenceSeq)
     cb(nextSeq, exception)
   }
 }
