@@ -8,7 +8,7 @@ import org.mockito.Mockito._
 import org.mockito.{Matchers, ArgumentCaptor}
 import scala.collection.JavaConversions._
 import com.wajam.nrv.TimeoutException
-import com.wajam.scn.MockScn
+import com.wajam.scn.{SequenceRange, MockScn}
 
 /**
  * 
@@ -30,7 +30,7 @@ class TestScnSequenceCallQueueActor extends FunSuite with BeforeAndAfter with Mo
   test("assign sequence number correctly when asked for one timestamp") {
     val expectedSequence = Seq[Long](11)
     val expectedCallback = ScnCallback[Long]((seq: Seq[Long], ex: Option[Exception]) => {}, 1)
-    mockScn.nextSequenceSeq = expectedSequence
+    mockScn.nextSequenceSeq = Seq(expectedSequence)
     sequenceActor.batch(expectedCallback)
     sequenceActor.execute()
 
@@ -41,7 +41,7 @@ class TestScnSequenceCallQueueActor extends FunSuite with BeforeAndAfter with Mo
 
   test("assign sequence number correctly when asked for more than one timestamp") {
     val expectedSequence = Seq[Long](11, 12)
-    mockScn.nextSequenceSeq = expectedSequence
+    mockScn.nextSequenceSeq = Seq(expectedSequence)
     val expectedCallback = ScnCallback[Long]((seq: Seq[Long], ex: Option[Exception]) => {}, 2)
     sequenceActor.batch(expectedCallback)
     sequenceActor.execute()
@@ -66,7 +66,7 @@ class TestScnSequenceCallQueueActor extends FunSuite with BeforeAndAfter with Mo
 
     //now get a response
     mockScn.exception = None
-    mockScn.nextSequenceSeq = expectedSequence
+    mockScn.nextSequenceSeq = Seq(expectedSequence)
     sequenceActor.execute()
 
     waitForActorToProcess()
@@ -82,7 +82,7 @@ class TestScnSequenceCallQueueActor extends FunSuite with BeforeAndAfter with Mo
     sequenceActor.batch(expectedFirstCallback)
     sequenceActor.batch(expectedSecondCallback)
 
-    mockScn.nextSequenceSeq = expectedSequence
+    mockScn.nextSequenceSeq = Seq(expectedSequence)
     val callbackCaptor: ArgumentCaptor[ScnCallback[Long]] =
       ArgumentCaptor.forClass(ScnCallback.getClass).asInstanceOf[ArgumentCaptor[ScnCallback[Long]]]
     val sequenceCaptor: ArgumentCaptor[Either[Exception, Seq[Long]]] =
@@ -124,6 +124,26 @@ class TestScnSequenceCallQueueActor extends FunSuite with BeforeAndAfter with Mo
 
   private def waitForActorToProcess() {
     Thread.sleep(100)
+  }
+
+  test("should discard out of order ranges") {
+    val callback1 = ScnCallback[Long]((seq: Seq[Long], ex: Option[Exception]) => {}, nb = 1, token = 1)
+    val callback2 = ScnCallback[Long]((seq: Seq[Long], ex: Option[Exception]) => {}, nb = 3, token = 1)
+    val callback3 = ScnCallback[Long]((seq: Seq[Long], ex: Option[Exception]) => {}, nb = 1, token = 1)
+    sequenceActor.batch(callback1)
+    sequenceActor.batch(callback2)
+    sequenceActor.batch(callback3)
+
+    mockScn.nextSequenceSeq = Seq(
+      Seq(SequenceRange(11, 12)),
+      Seq(SequenceRange(12, 14), SequenceRange(4, 17), SequenceRange(20, 21)),
+      Seq(SequenceRange(23, 24)))
+
+    waitForActorToProcess()
+
+    verify(mockCallbackExecutor, times(1)).executeCallback(callback1, Right(Seq(11)))
+    verify(mockCallbackExecutor, times(1)).executeCallback(callback2, Right(Seq(12, 13, 20)))
+    verify(mockCallbackExecutor, times(1)).executeCallback(callback3, Right(Seq(23)))
   }
 
 }

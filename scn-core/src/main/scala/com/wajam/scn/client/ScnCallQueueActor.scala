@@ -28,6 +28,9 @@ class ScnSequenceCallQueueActor(scn: Scn, seqName: String, executionRateInMs: In
     this(scn, seqName, executionRateInMs, timeoutInMs, List(callbackExecutor))
 
   private val responseError = metrics.meter("response-error", "response-error", metricName)
+  private val reponseSeqOutOfOrder = metrics.meter("response-sequence-out-of-order", "response-sequence-out-of-order", metricName)
+
+  private var lastSequenceRange: SequenceRange = SequenceRange(0, 0)
 
   protected def scnMethod = {
     scn.getNextSequence _
@@ -38,7 +41,17 @@ class ScnSequenceCallQueueActor(scn: Scn, seqName: String, executionRateInMs: In
       responseError.mark()
       debug("Exception while fetching sequence numbers. {}", optException.get)
     } else {
-      var sequenceNumbers = SequenceRange.ranges2sequence(response)
+      // Convert ranges into a sequence, droping out of order ranges in the process
+      var sequenceNumbers = response.foldLeft(List[Long]())((sequences, range) => {
+        if (range.from >= lastSequenceRange.to) {
+          lastSequenceRange = range
+          sequences ::: range.toList
+        } else {
+          reponseSeqOutOfOrder.mark()
+          debug("Received out of order sequence, discarding.")
+          sequences
+        }
+      })
       while (queue.hasMore && sequenceNumbers.size >= queue.front.get.nb) {
         val scnCb = queue.dequeue()
         executeCallback(scnCb, Right(sequenceNumbers.take(scnCb.nb)))
