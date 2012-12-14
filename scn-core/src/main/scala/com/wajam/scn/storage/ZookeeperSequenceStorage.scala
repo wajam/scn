@@ -5,16 +5,19 @@ import com.wajam.nrv.zookeeper.ZookeeperClient._
 import com.wajam.scn.SequenceRange
 import com.wajam.nrv.zookeeper.service.ZookeeperService
 import com.wajam.scn.storage.ZookeeperSequenceStorage._
-import com.wajam.nrv.utils.CurrentTime
+import com.wajam.nrv.utils.{Event, CurrentTime}
 import math._
 import com.yammer.metrics.scala.Instrumented
+import com.wajam.nrv.service.{MemberStatus, StatusTransitionEvent, Service}
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Sequence storage that stores sequences in Zookeeper
  */
-class ZookeeperSequenceStorage(zkClient: ZookeeperClient, name: String, minSaveAheadSize: Int, seed: Long = 1)
+class ZookeeperSequenceStorage(zkClient: ZookeeperClient, name: String, minSaveAheadSize: Int, scn: Service, seed: Long = 1)
   extends ScnStorage[SequenceRange] with CurrentTime with Instrumented {
 
+  private var checkReservedId = new AtomicBoolean(false)
   private var availableSeq = SequenceRange(seed, seed)
   private val saveAhead = new DynamicSequenceSaveAhead(minSaveAheadSize, this)
   @volatile private var lastSaveAheadSize: Long = saveAhead.size
@@ -26,6 +29,20 @@ class ZookeeperSequenceStorage(zkClient: ZookeeperClient, name: String, minSaveA
 
   zkClient.ensureAllExists(sequencePath(name), seed)
 
+  scn.addObserver(serviceEvent)
+
+  def serviceEvent(event: Event) {
+    event match {
+      case event: StatusTransitionEvent => {
+        // Force check of reserved id if the status of a Scn service member change
+        if (scn.members.exists(_ == event.member)) {
+          checkReservedId.set(true)
+        }
+      }
+      case _ =>
+    }
+  }
+
   /**
    * Get next sequence boundaries for given count.
    * WARNING: Calls to this function must be synchronized or single threaded
@@ -35,6 +52,11 @@ class ZookeeperSequenceStorage(zkClient: ZookeeperClient, name: String, minSaveA
    */
   def next(count: Int): List[SequenceRange] = {
     saveAhead.update(count)
+
+    // Reset available sequence if reserved id in zookeeper does not match
+    if (checkReservedId.getAndSet(false) && zkClient.getLong(sequencePath(name)) != availableSeq.to) {
+      availableSeq = SequenceRange(seed, seed)
+    }
 
     if (availableSeq.length >= count) {
       List(createSequenceFromLocalAvailableSeq(count))

@@ -108,7 +108,7 @@ class Scn(serviceName: String = "scn",
       val storage: ScnStorage[SequenceRange] = storageType match {
         case StorageType.ZOOKEEPER =>
           new ZookeeperSequenceStorage(zookeeperClient.get, name,
-            config.sequenceSaveAheadSize, config.sequenceSeeds.getOrElse(name, 1))
+            config.sequenceSaveAheadSize, this, config.sequenceSeeds.getOrElse(name, 1))
         case StorageType.MEMORY =>
           new InMemorySequenceStorage()
       }
