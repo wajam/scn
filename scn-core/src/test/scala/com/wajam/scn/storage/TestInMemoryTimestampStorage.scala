@@ -4,7 +4,7 @@ import org.scalatest.FunSuite
 import org.scalatest.matchers.ShouldMatchers._
 import com.wajam.scn.Timestamp
 import com.wajam.nrv.utils.ControlableCurrentTime
-import com.wajam.scn
+import com.wajam.scn.storage.ScnTimestamp._
 
 class TestInMemoryTimestampStorage extends FunSuite {
   test("increment") {
@@ -18,9 +18,9 @@ class TestInMemoryTimestampStorage extends FunSuite {
 
   test("unicity of generated ids") {
     val storage = new InMemoryTimestampStorage with ControlableCurrentTime
-    val unique = Timestamp.ranges2timestamps(storage.next(10) ::: storage.next(20) ::: storage.next(30))
+    val unique = ScnTimestamp.ranges2timestamps(storage.next(10) ::: storage.next(20) ::: storage.next(30))
     Thread.sleep(2000)
-    val unique2 = Timestamp.ranges2timestamps(unique ::: storage.next(20))
+    val unique2 = ScnTimestamp.ranges2timestamps(unique ::: storage.next(20))
 
     unique2 should be(unique2.distinct)
     unique.size should be(60)

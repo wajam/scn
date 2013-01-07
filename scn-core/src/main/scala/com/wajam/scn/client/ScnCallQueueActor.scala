@@ -12,6 +12,7 @@ import util.Random
 import com.wajam.nrv.service.Resolver
 import math._
 import scala.Left
+import com.wajam.scn.storage.ScnTimestamp
 
 /**
  * Actor that batches scn calls to get sequence numbers. It periodically call scn to get sequence numbers and then
@@ -78,7 +79,7 @@ class ScnTimestampCallQueueActor(scn: Scn, seqName: String, execRateInMs: Int, t
   private val responseError = metrics.meter("response-error", "response-error", metricName)
   private val responseOutdated = metrics.meter("response-outdated", "response-outdated", metricName)
 
-  private var lastAllocated: Timestamp = Timestamp.MIN
+  private var lastAllocated: Timestamp = ScnTimestamp.MIN
 
   protected def scnMethod = {
     scn.getNextTimestamp _
@@ -92,7 +93,7 @@ class ScnTimestampCallQueueActor(scn: Scn, seqName: String, execRateInMs: Int, t
       responseOutdated.mark()
       debug("Received outdated timestamps, discarding.")
     } else {
-      var timestamps = Timestamp.ranges2timestamps(response)
+      var timestamps = ScnTimestamp.ranges2timestamps(response)
       while (queue.hasMore && timestamps.size >= queue.front.get.nb) {
         val scnCb = queue.dequeue()
         val allocatedTimeStamps = timestamps.take(scnCb.nb)

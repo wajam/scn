@@ -4,7 +4,7 @@ import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.{BeforeAndAfter, FunSuite}
 import java.util.concurrent.{TimeUnit, CountDownLatch}
-import storage.{InMemoryTimestampStorage, ScnStorage}
+import storage.{ScnTimestamp, InMemoryTimestampStorage, ScnStorage}
 import org.scalatest.mock.MockitoSugar
 import org.mockito.Mockito._
 import org.scalatest.matchers.ShouldMatchers._
@@ -27,7 +27,7 @@ class TestTimestampActor extends FunSuite with BeforeAndAfter with MockitoSugar 
     val latch = new CountDownLatch(1)
 
     actor.next((values, e) => {
-      results = results ::: Timestamp.ranges2timestamps(values)
+      results = results ::: ScnTimestamp.ranges2timestamps(values)
       latch.countDown()
     }, 100)
 
@@ -46,7 +46,7 @@ class TestTimestampActor extends FunSuite with BeforeAndAfter with MockitoSugar 
     var results = List[Timestamp]()
 
     actor.next((values, e) => {
-      results = Timestamp.ranges2timestamps(values)
+      results = ScnTimestamp.ranges2timestamps(values)
       latch.countDown()
     }, 10)
 
@@ -74,7 +74,7 @@ class TestTimestampActor extends FunSuite with BeforeAndAfter with MockitoSugar 
 
     var results = List[Timestamp]()
     actor.next((values, e) => {
-      results = Timestamp.ranges2timestamps(values)
+      results = ScnTimestamp.ranges2timestamps(values)
       latch.countDown()
     }, 1)
 

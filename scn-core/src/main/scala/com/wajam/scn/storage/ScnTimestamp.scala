@@ -1,15 +1,11 @@
 package com.wajam.scn.storage
 
-import com.wajam.scn.Timestamp
+import com.wajam.scn.{SequenceRange, Timestamp}
 
 /**
  * Timestamp used to represent mutation time on storage
  */
-private[scn] case class ScnTimestamp(value: Long) extends Timestamp {
-
-  override def toString: String = value.toString
-
-}
+private[scn] case class ScnTimestamp(value: Long) extends Timestamp
 
 object ScnTimestamp {
   val MIN_SEQ_NO = 0
@@ -26,7 +22,15 @@ object ScnTimestamp {
     new ScnTimestamp(timevalue * 10000 + seq)
   }
 
-  def now = ScnTimestamp(System.currentTimeMillis(), ScnTimestamp.MIN_SEQ_NO)
-  val MIN = ScnTimestamp(0, ScnTimestamp.MIN_SEQ_NO)
-  val MAX = ScnTimestamp(Long.MaxValue)
+  def now: Timestamp = ScnTimestamp(System.currentTimeMillis(), ScnTimestamp.MIN_SEQ_NO)
+  val MIN: Timestamp = ScnTimestamp(0, ScnTimestamp.MIN_SEQ_NO)
+  val MAX: Timestamp = ScnTimestamp(Long.MaxValue)
+
+  implicit def ranges2timestamps(ranges: Seq[SequenceRange]): List[Timestamp] = {
+    SequenceRange.ranges2sequence(ranges).map(ScnTimestamp(_))
+  }
+
+  implicit def timestamps2ranges(sequence: Seq[Timestamp]): List[SequenceRange] = {
+    SequenceRange.sequence2ranges(sequence.map(_.value))
+  }
 }

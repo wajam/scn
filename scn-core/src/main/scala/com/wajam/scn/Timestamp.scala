@@ -1,35 +1,34 @@
 package com.wajam.scn
 
-import storage.ScnTimestamp
-
 /**
  * Describe a timestamp
  */
-trait Timestamp extends Ordered[Timestamp] {
+trait Timestamp extends Serializable with Ordered[Timestamp] {
   def value: Long
 
   override def compare(t: Timestamp) = compareTo(t)
+
   override def compareTo(t: Timestamp): Int = {
     value.compareTo(t.value)
   }
+
+  override def equals(other: Any): Boolean =
+    other match {
+      case that: Timestamp =>
+        (that canEqual this) &&
+          value == that.value
+      case _ => false
+    }
+
+  def canEqual(other: Any): Boolean = other.isInstanceOf[Timestamp]
+
+  override def hashCode = value.hashCode()
+
+  override def toString: String = value.toString
 }
 
 object Timestamp {
-  def apply(l: Long): Timestamp = {
-    ScnTimestamp(l)
-  }
-
-  def now = ScnTimestamp.now
-  def MIN = ScnTimestamp.MIN
-  def MAX = ScnTimestamp.MAX
-
-  implicit def timestamp2long(ts: Timestamp) = ts.value
-
-  implicit def ranges2timestamps(ranges: Seq[SequenceRange]): List[Timestamp] = {
-    SequenceRange.ranges2sequence(ranges).map(Timestamp(_))
-  }
-
-  implicit def timestamps2ranges(sequence: Seq[Timestamp]): List[SequenceRange] = {
-    SequenceRange.sequence2ranges(sequence.map(_.value))
+  def apply(l: Long): Timestamp = new Timestamp {
+    val value = l
   }
 }
