@@ -3,7 +3,8 @@ package com.wajam.scn.client
 import com.yammer.metrics.scala.Instrumented
 import java.util.concurrent._
 import scala.collection.JavaConversions._
-import com.wajam.scn.{SequenceRange, Timestamp, Scn}
+import com.wajam.scn.{SequenceRange, Scn}
+import com.wajam.nrv.utils.timestamp.{TimestampGenerator, Timestamp}
 
 /**
  * Scn client that front the SCN service and batches Scn calls to avoid excessive round trips between the
@@ -12,7 +13,7 @@ import com.wajam.scn.{SequenceRange, Timestamp, Scn}
  * @author : Jerome Gagnon <jerome@wajam.com>
  *
  */
-class ScnClient(scn: Scn, config: ScnClientConfig = ScnClientConfig()) extends Instrumented {
+class ScnClient(scn: Scn, config: ScnClientConfig = ScnClientConfig()) extends TimestampGenerator with Instrumented {
   private val metricSequenceStackSize = metrics.gauge[Int]("scn-stack-size", "sequence")({
     sequenceStackActors.size()
   })
