@@ -261,8 +261,8 @@ class ClientCallbackExecutor[CT](name: String, scn: Scn) extends Actor with Call
     loop {
       react {
         case callback: Callback[CT] =>
-          scnResponseTimer.update(System.currentTimeMillis() - callback.cb.startTime, TimeUnit.MILLISECONDS)
           scn.tracer.trace(callback.cb.context) {
+            scnResponseTimer.update(System.currentTimeMillis() - callback.cb.startTime, TimeUnit.MILLISECONDS)
             try {
               callback.response match {
                 case Left(e) => callback.cb.callback(Seq(), Some(e))
