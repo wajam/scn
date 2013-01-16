@@ -7,7 +7,8 @@ import org.scalatest.{BeforeAndAfter, FunSuite}
 import org.scalatest.matchers.ShouldMatchers._
 import com.wajam.nrv.utils.{CurrentTime, ControlableCurrentTime}
 import com.wajam.scn.storage.ZookeeperTimestampStorage._
-import com.wajam.scn.Timestamp
+import com.wajam.scn.storage.ScnTimestamp._
+import com.wajam.nrv.utils.timestamp.Timestamp
 
 @RunWith(classOf[JUnitRunner])
 class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
@@ -41,9 +42,9 @@ class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
   }
 
   test("unicity of generated ids") {
-    val unique = Timestamp.ranges2timestamps(storage.next(10) ::: storage.next(20) ::: storage.next(30))
+    val unique = ScnTimestamp.ranges2timestamps(storage.next(10) ::: storage.next(20) ::: storage.next(30))
     Thread.sleep(2000)
-    val unique2 = Timestamp.ranges2timestamps(unique ::: storage.next(20))
+    val unique2 = ScnTimestamp.ranges2timestamps(unique ::: storage.next(20))
 
     unique2 should be(unique2.distinct)
     unique.size should be(60)

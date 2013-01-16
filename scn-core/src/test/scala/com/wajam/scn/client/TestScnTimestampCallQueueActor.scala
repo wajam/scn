@@ -8,7 +8,9 @@ import org.mockito.Mockito._
 import org.mockito.{Matchers, ArgumentCaptor}
 import scala.collection.JavaConversions._
 import com.wajam.nrv.TimeoutException
-import com.wajam.scn.{Timestamp, MockScn}
+import com.wajam.scn.MockScn
+import com.wajam.scn.storage.ScnTimestamp._
+import com.wajam.nrv.utils.timestamp.Timestamp
 
 /**
  *
