@@ -6,12 +6,12 @@ import com.wajam.nrv.cluster.{LocalNode, StaticClusterManager, Cluster}
 import com.wajam.scn.storage.StorageType
 import java.net.URL
 import org.apache.log4j.PropertyConfigurator
-import com.wajam.nrvext.scribe.ScribeTraceRecorder
 import com.wajam.nrv.tracing.{Tracer, NullTraceRecorder}
 import com.yammer.metrics.reporting.GraphiteReporter
 import java.util.concurrent.TimeUnit
 import com.wajam.nrv.Logging
 import com.wajam.nrv.service.ActionSupportOptions
+import com.wajam.nrv.scribe.ScribeTraceRecorder
 
 /**
  * Description
