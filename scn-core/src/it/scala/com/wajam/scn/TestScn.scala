@@ -5,12 +5,12 @@ import org.scalatest.{BeforeAndAfter, FunSuite}
 import storage.StorageType
 import com.wajam.nrv.cluster.{Node, Cluster, LocalNode, TestingClusterInstance}
 import com.wajam.nrv.tracing.Tracer
-import com.wajam.nrvext.scribe.ScribeTraceRecorder
 import com.wajam.nrv.service.{MemberStatus, ActionSupportOptions, Resolver}
 import com.wajam.nrv.zookeeper.cluster.{ZookeeperTestingClusterDriver, ZookeeperClusterManager}
 import com.wajam.nrv.utils.{NullLogging, Future, Promise}
 import org.scalatest.matchers.ShouldMatchers._
 import com.wajam.nrv.Logging
+import com.wajam.nrv.scribe.ScribeTraceRecorder
 
 class TestScn extends FunSuite with BeforeAndAfter {
 
