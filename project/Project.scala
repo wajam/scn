@@ -24,7 +24,7 @@ object ScnBuild extends Build {
     "log4j" % "log4j" % "1.2.15" exclude("javax.jms", "jms") exclude("com.sun.jmx", "jmxri") exclude("com.sun.jdmk", "jmxtools"),
     "com.wajam" %% "nrv-core" % "0.1-SNAPSHOT" exclude("org.slf4j", "slf4j-nop"),
     "com.wajam" %% "nrv-core" % "0.1-SNAPSHOT",
-    "com.wajam" %% "nrv-ext" % "0.1-SNAPSHOT",
+    "com.wajam" %% "nrv-extension" % "0.1-SNAPSHOT",
     "com.wajam" %% "nrv-zookeeper" % "0.1-SNAPSHOT",
     "com.wajam" %% "nrv-scribe" % "0.1-SNAPSHOT",
     "com.yammer.metrics" %% "metrics-scala" % "2.1.2",
