@@ -54,8 +54,11 @@ class ScnClient(scn: Scn, config: ScnClientConfig = ScnClientConfig()) extends T
     val timestampActor = timestampStackActors.getOrElse(name, {
       val actor = new ScnTimestampCallQueueActor(scn, name, config.executionRateInMs, config.timeoutInMs,
         timestampExecutors)
-      actor.start()
-      Option(timestampStackActors.putIfAbsent(name, actor)).getOrElse(actor)
+      Option(timestampStackActors.putIfAbsent(name, actor)).getOrElse({
+        // Start actor only if this is the one put in the map
+        actor.start()
+        actor
+      })
     })
     timestampActor ! Batched[Timestamp](ScnCallback[Timestamp](cb, nb, System.currentTimeMillis(), token,
       scn.service.tracer.currentContext))
@@ -76,8 +79,11 @@ class ScnClient(scn: Scn, config: ScnClientConfig = ScnClientConfig()) extends T
     val sequenceActor = sequenceStackActors.getOrElse(name, {
       val actor = new ScnSequenceCallQueueActor(scn, name, config.executionRateInMs, config.timeoutInMs,
         sequenceExecutors)
-      actor.start()
-      Option(sequenceStackActors.putIfAbsent(name, actor)).getOrElse(actor)
+      Option(sequenceStackActors.putIfAbsent(name, actor)).getOrElse({
+        // Start actor only if this is the one put in the map
+        actor.start()
+        actor
+      })
     })
     sequenceActor ! Batched[Long](ScnCallback[Long](cb, nb, System.currentTimeMillis(), token,
       scn.service.tracer.currentContext))
