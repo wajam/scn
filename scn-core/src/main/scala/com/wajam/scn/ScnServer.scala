@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit
 import com.wajam.nrv.Logging
 import com.wajam.nrv.service.ActionSupportOptions
 import com.wajam.nrv.scribe.ScribeTraceRecorder
+import com.wajam.nrv.protocol.NrvProtocolVersion
 
 /**
  * Description
@@ -44,7 +45,9 @@ class ScnServer(config: ScnConfiguration) extends Logging {
     case "static" => new StaticClusterManager
     case "zookeeper" => new ZookeeperClusterManager(zookeeper)
   }
-  val cluster = new Cluster(node, clusterManager, actionSupportOptions = new ActionSupportOptions(tracer = Some(new Tracer(traceRecorder))))
+  val cluster = new Cluster(node, clusterManager,
+    actionSupportOptions = new ActionSupportOptions(tracer = Some(new Tracer(traceRecorder))),
+    NrvProtocolVersion(config.getNrvProtocolVersion))
 
   // Sequence number generator
   val scnStorage = config.getScnSequenceStorage
