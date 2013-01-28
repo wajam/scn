@@ -45,12 +45,12 @@ class ScnServer(config: ScnConfiguration) extends Logging {
     case "static" => new StaticClusterManager
     case "zookeeper" => new ZookeeperClusterManager(zookeeper)
   }
-  val cluster = new Cluster(node, clusterManager,
-    actionSupportOptions = new ActionSupportOptions(tracer = Some(new Tracer(traceRecorder))))
 
   // Alternative Nrv Protocol from config
   val alternativeNrv =  new NrvProtocol(node, protocolVersion = NrvProtocolVersion(config.getNrvProtocolVersion))
-  cluster.registerProtocol(alternativeNrv, default = true)
+
+  val cluster = new Cluster(node, clusterManager,
+    actionSupportOptions = new ActionSupportOptions(tracer = Some(new Tracer(traceRecorder))), Some(alternativeNrv))
 
   // Sequence number generator
   val scnStorage = config.getScnSequenceStorage
