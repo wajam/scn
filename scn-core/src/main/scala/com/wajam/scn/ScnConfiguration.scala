@@ -30,6 +30,10 @@ class ScnConfiguration(config: Configuration) {
     config.getStringArray("scn.nrv.zookeeper.servers").mkString(",")
   }
 
+  def getNrvProtocolVersion: Int = {
+    config.getInt("scn.nrv.nrv_protocol.version", 1)
+  }
+
   def getScnSequenceStorage: String = {
     config.getString("scn.storage", "memory")
   }
