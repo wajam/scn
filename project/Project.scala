@@ -15,6 +15,7 @@ object ScnBuild extends Build {
     "Sonatype" at "http://oss.sonatype.org/content/repositories/release",
     "Cloudera" at "https://repository.cloudera.com/artifactory/cloudera-repos/",
     "Scallop" at "http://mvnrepository.com/",
+    "Twitter" at "http://maven.twttr.com/",
     "Wajam" at "http://ci1.is.wajam/"
   )
 
