@@ -40,6 +40,8 @@ class ScnClient(scn: Scn, config: ScnClientConfig = ScnClientConfig()) extends T
   private val timestampExecutors = 1.to(config.numExecutor).map(i =>
     new ClientCallbackExecutor[Timestamp]("sequences-executor-" + i, scn)).toList
 
+  def responseTimeout: Long = config.timeoutInMs
+
   /**
    * Fetch timestamps
    *
