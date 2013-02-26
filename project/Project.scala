@@ -59,5 +59,6 @@ object ScnBuild extends Build {
     .settings(testOptions in IntegrationTest := Seq(Tests.Filter(s => s.contains("Test"))))
     .settings(parallelExecution in IntegrationTest := false)
     .settings(StartScriptPlugin.startScriptForClassesSettings: _*)
+    .settings(mainClass in (Compile) := Some("com.wajam.scn.ScnServer"))
 }
 
