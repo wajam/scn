@@ -18,7 +18,7 @@ class TestTimestampActor extends FunSuite with BeforeAndAfter with MockitoSugar 
 
   before {
     storage = new InMemoryTimestampStorage
-    actor = new SequenceActor[SequenceRange]("test", storage)
+    actor = new SequenceActor[SequenceRange]("test", storage, messageExpirationMs = 750)
     actor.start()
   }
 
@@ -39,20 +39,25 @@ class TestTimestampActor extends FunSuite with BeforeAndAfter with MockitoSugar 
   }
 
   test("timestamps generation with batching of 10") {
+
+    // Fill the queue, but one
     for (i <- 0 to 999) {
       actor.next((_, e) => {}, 1)
     }
 
     val latch = new CountDownLatch(1)
     var results = List[Timestamp]()
+    var exception: Option[Exception] = None
 
     actor.next((values, e) => {
+      exception = e
       results = ScnTimestamp.ranges2timestamps(values)
       latch.countDown()
     }, 10)
 
     latch.await()
 
+    assert(exception === None)
     assert(results.size === 10)
   }
 
