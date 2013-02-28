@@ -95,8 +95,8 @@ class Scn(serviceName: String = "scn",
       {
         // TODO: MigrationDuplicate: Remove logic for parameters
         val sequence =
-          if (respMsg.messageData != null)
-            respMsg.messageData
+          if (respMsg.hasData)
+            respMsg.getData[Seq[SequenceRange]]
           else if (respMsg.parameters.contains("sequence"))
             respMsg.parameters("sequence").asInstanceOf[MMigrationCatchAll].value
 
