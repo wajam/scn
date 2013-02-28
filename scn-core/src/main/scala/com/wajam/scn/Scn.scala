@@ -55,8 +55,8 @@ class Scn(serviceName: String = "scn",
   private[scn] val nextTimestamp = this.registerAction(new Action("/timestamp/:name/next", msg => {
     nextTimestampCalls.mark()
     val timer = nextTimestampTime.timerContext()
-    val name = msg.parameters("name").asInstanceOf[MString].value
-    val nb = msg.parameters("nb").asInstanceOf[MInt].value
+    val MString(name) = msg.parameters("name")
+    val MInt(nb) = msg.parameters("nb")
     nextTimestampCallsSize.mark(nb)
 
     val timestampActor = timestampActors.getOrElse(name, {
@@ -114,8 +114,8 @@ class Scn(serviceName: String = "scn",
   private[scn] val nextSequence = this.registerAction(new Action("/sequence/:name/next", msg => {
     nextSequenceCalls.mark()
     val timer = nextSequenceTime.timerContext()
-    val name = msg.parameters("name").asInstanceOf[MString].value
-    val nb = msg.parameters("nb").asInstanceOf[MInt].value
+    val MString(name) = msg.parameters("name")
+    val MInt(nb) = msg.parameters("nb")
     nextSequenceCallsSize.mark(nb)
 
     val sequenceActor = sequenceActors.getOrElse(name, {
