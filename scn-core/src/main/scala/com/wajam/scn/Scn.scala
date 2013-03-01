@@ -89,8 +89,9 @@ class Scn(serviceName: String = "scn",
     }, nb)
   }))
 
-  private[scn] def getNext(name: String, action: Action, cb: (Seq[SequenceRange], Option[Exception]) => Unit, nb: Int) {
-    action.call(params = Map("name" -> MString(name), "nb" -> MInt(nb)), onReply = (respMsg, optException) => {
+  private[scn] def getNext(sequenceName: String, action: Action, cb: (Seq[SequenceRange], Option[Exception]) => Unit, nb: Int) {
+
+    action.call(params = Map("name" -> MString(sequenceName), "nb" -> MInt(nb)), onReply = (respMsg, optException) => {
       if (optException.isEmpty)
       {
         // TODO: MigrationDuplicate: Remove logic for parameters
@@ -107,8 +108,8 @@ class Scn(serviceName: String = "scn",
     })
   }
 
-  private[scn] def getNextTimestamp(name: String, cb: (Seq[SequenceRange], Option[Exception]) => Unit, nb: Int) {
-    getNext(name, this.nextTimestamp, cb, nb)
+  private[scn] def getNextTimestamp(sequenceName: String, cb: (Seq[SequenceRange], Option[Exception]) => Unit, nb: Int) {
+    getNext(sequenceName, this.nextTimestamp, cb, nb)
   }
 
   private[scn] val nextSequence = this.registerAction(new Action("/sequence/:name/next", msg => {
@@ -147,7 +148,7 @@ class Scn(serviceName: String = "scn",
     }, nb)
   }))
 
-  private[scn] def getNextSequence(name: String, cb: (Seq[SequenceRange], Option[Exception]) => Unit, nb: Int) {
-    getNext(name, this.nextSequence, cb, nb)
+  private[scn] def getNextSequence(sequenceName: String, cb: (Seq[SequenceRange], Option[Exception]) => Unit, nb: Int) {
+    getNext(sequenceName, this.nextSequence, cb, nb)
   }
 }
