@@ -89,7 +89,7 @@ class Scn(serviceName: String = "scn",
     }, nb)
   }))
 
-  private[scn] def getNext(action: Action, cb: (Seq[SequenceRange], Option[Exception]) => Unit, nb: Int) {
+  private[scn] def getNext(name: String, action: Action, cb: (Seq[SequenceRange], Option[Exception]) => Unit, nb: Int) {
     action.call(params = Map("name" -> MString(name), "nb" -> MInt(nb)), onReply = (respMsg, optException) => {
       if (optException.isEmpty)
       {
@@ -108,7 +108,7 @@ class Scn(serviceName: String = "scn",
   }
 
   private[scn] def getNextTimestamp(name: String, cb: (Seq[SequenceRange], Option[Exception]) => Unit, nb: Int) {
-    getNext(this.nextTimestamp, cb, nb)
+    getNext(name, this.nextTimestamp, cb, nb)
   }
 
   private[scn] val nextSequence = this.registerAction(new Action("/sequence/:name/next", msg => {
@@ -148,6 +148,6 @@ class Scn(serviceName: String = "scn",
   }))
 
   private[scn] def getNextSequence(name: String, cb: (Seq[SequenceRange], Option[Exception]) => Unit, nb: Int) {
-    getNext(this.nextSequence, cb, nb)
+    getNext(name, this.nextSequence, cb, nb)
   }
 }
