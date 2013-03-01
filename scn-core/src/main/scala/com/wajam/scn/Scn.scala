@@ -9,6 +9,7 @@ import com.wajam.nrv.zookeeper.ZookeeperClient
 import com.wajam.nrv.protocol.Protocol
 import com.wajam.nrv.Logging
 import com.yammer.metrics.scala.Instrumented
+import com.wajam.nrv.data.{MMigrationCatchAll, MString, MInt}
 
 /**
  * SCN service that generates atomically increasing sequence number or uniquely increasing timestamp.
@@ -54,8 +55,8 @@ class Scn(serviceName: String = "scn",
   private[scn] val nextTimestamp = this.registerAction(new Action("/timestamp/:name/next", msg => {
     nextTimestampCalls.mark()
     val timer = nextTimestampTime.timerContext()
-    val name = msg.parameters("name").toString
-    val nb = msg.parameters("nb").toString.toInt
+    val MString(name) = msg.parameters("name")
+    val MInt(nb) = msg.parameters("nb")
     nextTimestampCallsSize.mark(nb)
 
     val timestampActor = timestampActors.getOrElse(name, {
@@ -81,27 +82,40 @@ class Scn(serviceName: String = "scn",
           msg.replyWithError(ex)
         case _ =>
           nextTimestampSuccess.mark()
-          val hdr = Map("name" -> name, "sequence" -> seq)
-          msg.reply(hdr)
+          val hdr = Map("name" -> MString(name), "sequence" -> MMigrationCatchAll(seq))
+          msg.reply(hdr, data=seq)
       }
       timer.stop()
     }, nb)
   }))
 
-  private[scn] def getNextTimestamp(name: String, cb: (Seq[SequenceRange], Option[Exception]) => Unit, nb: Int) {
-    this.nextTimestamp.call(params = Map("name" -> name, "nb" -> nb), onReply = (respMsg, optException) => {
+  private[scn] def getNext(action: Action, cb: (Seq[SequenceRange], Option[Exception]) => Unit, nb: Int) {
+    action.call(params = Map("name" -> MString(name), "nb" -> MInt(nb)), onReply = (respMsg, optException) => {
       if (optException.isEmpty)
-        cb(respMsg.parameters("sequence").asInstanceOf[Seq[SequenceRange]], None)
+      {
+        // TODO: MigrationDuplicate: Remove logic for parameters
+        val sequence =
+          if (respMsg.hasData)
+            respMsg.getData[Seq[SequenceRange]]
+          else if (respMsg.parameters.contains("sequence"))
+            respMsg.parameters("sequence").asInstanceOf[MMigrationCatchAll].value
+
+        cb(sequence.asInstanceOf[Seq[SequenceRange]], None)
+      }
       else
         cb(Nil, optException)
     })
   }
 
+  private[scn] def getNextTimestamp(name: String, cb: (Seq[SequenceRange], Option[Exception]) => Unit, nb: Int) {
+    getNext(this.nextTimestamp, cb, nb)
+  }
+
   private[scn] val nextSequence = this.registerAction(new Action("/sequence/:name/next", msg => {
     nextSequenceCalls.mark()
     val timer = nextSequenceTime.timerContext()
-    val name = msg.parameters("name").toString
-    val nb = msg.parameters("nb").toString.toInt
+    val MString(name) = msg.parameters("name")
+    val MInt(nb) = msg.parameters("nb")
     nextSequenceCallsSize.mark(nb)
 
     val sequenceActor = sequenceActors.getOrElse(name, {
@@ -126,19 +140,14 @@ class Scn(serviceName: String = "scn",
           msg.replyWithError(ex)
         case _ =>
           nextSequenceSuccess.mark()
-          val hdr = Map("name" -> name, "sequence" -> seq)
-          msg.reply(hdr)
+          val hdr = Map("name" -> MString(name), "sequence" -> MMigrationCatchAll(seq))
+          msg.reply(hdr, data=seq)
       }
       timer.stop()
     }, nb)
   }))
 
   private[scn] def getNextSequence(name: String, cb: (Seq[SequenceRange], Option[Exception]) => Unit, nb: Int) {
-    this.nextSequence.call(params = Map("name" -> name, "nb" -> nb), onReply = (respMsg, optException) => {
-      if (optException.isEmpty)
-        cb(respMsg.parameters("sequence").asInstanceOf[Seq[SequenceRange]], None)
-      else
-        cb(Nil, optException)
-    })
+    getNext(this.nextSequence, cb, nb)
   }
 }
