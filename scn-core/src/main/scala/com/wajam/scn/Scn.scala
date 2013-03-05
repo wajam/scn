@@ -9,7 +9,7 @@ import com.wajam.nrv.zookeeper.ZookeeperClient
 import com.wajam.nrv.protocol.Protocol
 import com.wajam.nrv.Logging
 import com.yammer.metrics.scala.Instrumented
-import com.wajam.nrv.data.{MMigrationCatchAll, MString, MInt}
+import com.wajam.nrv.data.{MString, MInt}
 
 /**
  * SCN service that generates atomically increasing sequence number or uniquely increasing timestamp.
@@ -82,7 +82,7 @@ class Scn(serviceName: String = "scn",
           msg.replyWithError(ex)
         case _ =>
           nextTimestampSuccess.mark()
-          val hdr = Map("name" -> MString(name), "sequence" -> MMigrationCatchAll(seq))
+          val hdr = Map("name" -> MString(name))
           msg.reply(hdr, data=seq)
       }
       timer.stop()
@@ -94,12 +94,9 @@ class Scn(serviceName: String = "scn",
     action.call(params = Map("name" -> MString(sequenceName), "nb" -> MInt(nb)), onReply = (respMsg, optException) => {
       if (optException.isEmpty)
       {
-        // TODO: MigrationDuplicate: Remove logic for parameters
         val sequence =
           if (respMsg.hasData)
             respMsg.getData[Seq[SequenceRange]]
-          else if (respMsg.parameters.contains("sequence"))
-            respMsg.parameters("sequence").asInstanceOf[MMigrationCatchAll].value
 
         cb(sequence.asInstanceOf[Seq[SequenceRange]], None)
       }
@@ -141,7 +138,7 @@ class Scn(serviceName: String = "scn",
           msg.replyWithError(ex)
         case _ =>
           nextSequenceSuccess.mark()
-          val hdr = Map("name" -> MString(name), "sequence" -> MMigrationCatchAll(seq))
+          val hdr = Map("name" -> MString(name))
           msg.reply(hdr, data=seq)
       }
       timer.stop()
