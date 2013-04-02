@@ -1,6 +1,6 @@
 import sbt._
 import Keys._
-import com.typesafe.startscript.StartScriptPlugin
+import com.typesafe.sbt.SbtStartScript
 
 object ScnBuild extends Build {
   var commonResolvers = Seq(
@@ -51,7 +51,7 @@ object ScnBuild extends Build {
     .settings(defaultSettings: _*)
     .settings(testOptions in IntegrationTest := Seq(Tests.Filter(s => s.contains("Test"))))
     .settings(parallelExecution in IntegrationTest := false)
-    .settings(StartScriptPlugin.startScriptForClassesSettings: _*)
+    .settings(SbtStartScript.startScriptForClassesSettings: _*)
     .aggregate(core)
 
   lazy val core = Project("scn-core", file("scn-core"))
@@ -59,7 +59,7 @@ object ScnBuild extends Build {
     .settings(defaultSettings: _*)
     .settings(testOptions in IntegrationTest := Seq(Tests.Filter(s => s.contains("Test"))))
     .settings(parallelExecution in IntegrationTest := false)
-    .settings(StartScriptPlugin.startScriptForClassesSettings: _*)
+    .settings(SbtStartScript.startScriptForClassesSettings: _*)
     .settings(mainClass in (Compile) := Some("com.wajam.scn.ScnServer"))
 }
 
