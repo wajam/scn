@@ -16,7 +16,7 @@ object ScnBuild extends Build {
     "Cloudera" at "https://repository.cloudera.com/artifactory/cloudera-repos/",
     "Scallop" at "http://mvnrepository.com/",
     "Twitter" at "http://maven.twttr.com/",
-    "Wajam" at "http://ci1.is.wajam/"
+    "Wajam" at "http://ci1.cx.wajam/"
   )
 
   var commonDeps = Seq(
