@@ -39,8 +39,14 @@ private[scn] class ScnInternalTranslator {
     val transport = PTransport.newBuilder()
 
     entity match {
-      case list: List[SequenceRange] if list.forall(_.isInstanceOf[SequenceRange]) =>
+
+      case null => {
+        transport.setType(PTransport.Type.Empty)
+      }
+      case list: List[SequenceRange] if list.forall(_.isInstanceOf[SequenceRange]) => {
         list.foreach((psr) => transport.addSequenceRanges(encodeSequenceRange(psr)))
+        transport.setType(PTransport.Type.ListSequenceRange)
+      }
 
       case _ => throw new RuntimeException("Unsupported entity type: " + entity.getClass)
     }
@@ -55,6 +61,9 @@ private[scn] class ScnInternalTranslator {
     transport.getType match {
       case PTransport.Type.ListSequenceRange =>
         transport.getSequenceRangesList.map(decodeSequenceRange(_)).toList
+
+      case PTransport.Type.Empty =>
+        null
 
       case _ => throw new RuntimeException("Unsupported entity type: " + transport.getType)
     }

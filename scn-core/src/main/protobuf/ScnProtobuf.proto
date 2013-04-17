@@ -14,9 +14,9 @@ package com.wajam.scn.protobuf;
 
 message PTransport {
 
-  // Only one for the moment but future-proofing
   enum Type {
-    ListSequenceRange = 1;
+    Empty = 1;
+    ListSequenceRange = 2;
   }
 
   optional Type type = 1;

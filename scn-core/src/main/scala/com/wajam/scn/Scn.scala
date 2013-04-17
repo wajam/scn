@@ -24,8 +24,13 @@ class Scn(serviceName: String = "scn",
           config: ScnConfig,
           storageType: StorageType.Value = StorageType.ZOOKEEPER,
           zookeeperClient: Option[ZookeeperClient] = None)
-  extends Service(serviceName, new ActionSupportOptions(protocol = protocol,
-    resolver = Some(new Resolver(replica = 2, tokenExtractor = Resolver.TOKEN_HASH_PARAM("name")))))
+  extends Service(serviceName,
+    new ActionSupportOptions(
+      protocol = protocol,
+      resolver = Some(new Resolver(replica = 2, tokenExtractor = Resolver.TOKEN_HASH_PARAM("name"))),
+      nrvCodec = Some(new ScnCodec))
+  )
+
   with Logging with Instrumented {
 
   def this(serviceName: String,
@@ -83,7 +88,7 @@ class Scn(serviceName: String = "scn",
         case _ =>
           nextTimestampSuccess.mark()
           val hdr = Map("name" -> MString(name))
-          msg.reply(hdr, data=seq)
+          msg.reply(hdr, data = seq)
       }
       timer.stop()
     }, nb)
@@ -92,8 +97,7 @@ class Scn(serviceName: String = "scn",
   private[scn] def getNext(sequenceName: String, action: Action, cb: (Seq[SequenceRange], Option[Exception]) => Unit, nb: Int) {
 
     action.call(params = Map("name" -> MString(sequenceName), "nb" -> MInt(nb)), onReply = (respMsg, optException) => {
-      if (optException.isEmpty)
-      {
+      if (optException.isEmpty) {
         val sequence =
           if (respMsg.hasData)
             respMsg.getData[Seq[SequenceRange]]
@@ -139,7 +143,7 @@ class Scn(serviceName: String = "scn",
         case _ =>
           nextSequenceSuccess.mark()
           val hdr = Map("name" -> MString(name))
-          msg.reply(hdr, data=seq)
+          msg.reply(hdr, data = seq)
       }
       timer.stop()
     }, nb)

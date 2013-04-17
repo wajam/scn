@@ -55,17 +55,20 @@ public final class ScnProtobuf {
     
     public enum Type
         implements com.google.protobuf.ProtocolMessageEnum {
-      ListSequenceRange(0, 1),
+      Empty(0, 1),
+      ListSequenceRange(1, 2),
       ;
       
-      public static final int ListSequenceRange_VALUE = 1;
+      public static final int Empty_VALUE = 1;
+      public static final int ListSequenceRange_VALUE = 2;
       
       
       public final int getNumber() { return value; }
       
       public static Type valueOf(int value) {
         switch (value) {
-          case 1: return ListSequenceRange;
+          case 1: return Empty;
+          case 2: return ListSequenceRange;
           default: return null;
         }
       }
@@ -96,7 +99,7 @@ public final class ScnProtobuf {
       }
       
       private static final Type[] VALUES = {
-        ListSequenceRange, 
+        Empty, ListSequenceRange, 
       };
       
       public static Type valueOf(
@@ -152,7 +155,7 @@ public final class ScnProtobuf {
     }
     
     private void initFields() {
-      type_ = com.wajam.scn.protobuf.ScnProtobuf.PTransport.Type.ListSequenceRange;
+      type_ = com.wajam.scn.protobuf.ScnProtobuf.PTransport.Type.Empty;
       sequenceRanges_ = java.util.Collections.emptyList();
     }
     private byte memoizedIsInitialized = -1;
@@ -315,7 +318,7 @@ public final class ScnProtobuf {
       
       public Builder clear() {
         super.clear();
-        type_ = com.wajam.scn.protobuf.ScnProtobuf.PTransport.Type.ListSequenceRange;
+        type_ = com.wajam.scn.protobuf.ScnProtobuf.PTransport.Type.Empty;
         bitField0_ = (bitField0_ & ~0x00000001);
         if (sequenceRangesBuilder_ == null) {
           sequenceRanges_ = java.util.Collections.emptyList();
@@ -474,7 +477,7 @@ public final class ScnProtobuf {
       private int bitField0_;
       
       // optional .com.wajam.scn.protobuf.PTransport.Type type = 1;
-      private com.wajam.scn.protobuf.ScnProtobuf.PTransport.Type type_ = com.wajam.scn.protobuf.ScnProtobuf.PTransport.Type.ListSequenceRange;
+      private com.wajam.scn.protobuf.ScnProtobuf.PTransport.Type type_ = com.wajam.scn.protobuf.ScnProtobuf.PTransport.Type.Empty;
       public boolean hasType() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
@@ -492,7 +495,7 @@ public final class ScnProtobuf {
       }
       public Builder clearType() {
         bitField0_ = (bitField0_ & ~0x00000001);
-        type_ = com.wajam.scn.protobuf.ScnProtobuf.PTransport.Type.ListSequenceRange;
+        type_ = com.wajam.scn.protobuf.ScnProtobuf.PTransport.Type.Empty;
         onChanged();
         return this;
       }
@@ -1109,12 +1112,12 @@ public final class ScnProtobuf {
   static {
     java.lang.String[] descriptorData = {
       "\n\021ScnProtobuf.proto\022\026com.wajam.scn.proto" +
-      "buf\"\242\001\n\nPTransport\0225\n\004type\030\001 \001(\0162\'.com.w" +
+      "buf\"\255\001\n\nPTransport\0225\n\004type\030\001 \001(\0162\'.com.w" +
       "ajam.scn.protobuf.PTransport.Type\022>\n\016seq" +
       "uenceRanges\030\002 \003(\0132&.com.wajam.scn.protob" +
-      "uf.PSequenceRange\"\035\n\004Type\022\025\n\021ListSequenc" +
-      "eRange\020\001\"*\n\016PSequenceRange\022\n\n\002to\030\001 \001(\004\022\014" +
-      "\n\004from\030\002 \001(\004"
+      "uf.PSequenceRange\"(\n\004Type\022\t\n\005Empty\020\001\022\025\n\021" +
+      "ListSequenceRange\020\002\"*\n\016PSequenceRange\022\n\n" +
+      "\002to\030\001 \001(\004\022\014\n\004from\030\002 \001(\004"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
