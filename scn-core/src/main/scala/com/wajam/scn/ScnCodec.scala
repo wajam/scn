@@ -1,8 +1,9 @@
 package com.wajam.scn
 
-import com.wajam.nrv.protocol.codec.Codec
+import com.wajam.nrv.protocol.codec.{GenericJavaSerializeCodec, Codec}
 import com.wajam.scn.protobuf.ScnProtobuf._
 import scala.collection.JavaConversions._
+import java.nio.ByteBuffer
 
 class ScnCodec extends Codec {
 
@@ -13,8 +14,22 @@ class ScnCodec extends Codec {
   }
 
   def decode(data: Array[Byte], context: Any): Any = {
-    internal.decode(data)
+
+    // If java serialized, decode with java, else decode with mryCodec.
+    val magicShort: Int = ByteBuffer.wrap(data, 0, 2).getShort
+
+    if (magicShort == ScnCodec.JavaSerializeMagicShort)
+      ScnCodec.genericCodec.decode(data)
+    else
+      internal.decode(data)
   }
+}
+
+object ScnCodec {
+  // Source: http://docs.oracle.com/javase/6/docs/platform/serialization/spec/protocol.html
+  private val JavaSerializeMagicShort : Short = (0xACED).toShort
+
+  private val genericCodec = new GenericJavaSerializeCodec
 }
 
 private[scn] class ScnInternalTranslator {
