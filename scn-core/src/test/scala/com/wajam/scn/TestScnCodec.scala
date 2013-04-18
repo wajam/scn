@@ -6,7 +6,7 @@ import com.wajam.nrv.protocol.codec.GenericJavaSerializeCodec
 
 class TestScnCodec extends FunSuite with ShouldMatchers {
 
-  test("can encode/decode void") {
+  test("can encode/decode empty") {
 
     val list: AnyRef  = null
 
@@ -30,7 +30,7 @@ class TestScnCodec extends FunSuite with ShouldMatchers {
    list should equal(list2)
  }
 
-  test("can {encode java}/{decode java} SequenceRange") {
+  test("can {encode java}/{silently decode java} SequenceRange") {
 
     val list: List[SequenceRange] = List(SequenceRange(1, 2), SequenceRange(5, 6))
 
