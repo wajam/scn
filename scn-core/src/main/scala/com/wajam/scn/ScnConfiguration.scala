@@ -5,9 +5,6 @@ import org.apache.commons.configuration.{Configuration, PropertiesConfiguration,
 import com.wajam.nrv.Logging
 import scala.collection.JavaConversions._
 
-/**
- *
- */
 class ScnConfiguration(config: Configuration) {
 
   def getEnvironment: String = {
@@ -28,10 +25,6 @@ class ScnConfiguration(config: Configuration) {
 
   def getNrvZookeeperServers: String = {
     config.getStringArray("scn.nrv.zookeeper.servers").mkString(",")
-  }
-
-  def getNrvProtocolVersion: Int = {
-    config.getInt("scn.nrv.nrv_protocol.version", 1)
   }
 
   def getScnSequenceStorage: String = {
