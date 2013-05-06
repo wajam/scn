@@ -29,10 +29,10 @@ object ScnBuild extends Build {
     "com.wajam" %% "nrv-extension" % "0.1-SNAPSHOT",
     "com.wajam" %% "nrv-zookeeper" % "0.1-SNAPSHOT",
     "com.wajam" %% "nrv-scribe" % "0.1-SNAPSHOT",
-    "com.yammer.metrics" %% "metrics-scala" % "2.1.2",
-    "com.yammer.metrics" % "metrics-graphite" % "2.1.2",
-    "org.rogach" %% "scallop" % "0.6.0",
-    "org.scalatest" %% "scalatest" % "1.7.1" % "test,it",
+    "nl.grons" %% "metrics-scala" % "2.2.0",
+    "com.yammer.metrics" % "metrics-graphite" % "2.2.0",
+    "org.rogach" %% "scallop" % "0.6.3",
+    "org.scalatest" %% "scalatest" % "1.9.1" % "test,it",
     "junit" % "junit" % "4.10" % "test,it",
     "org.mockito" % "mockito-core" % "1.9.0" % "test,it"
   )
