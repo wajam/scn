@@ -42,7 +42,8 @@ object ScnBuild extends Build {
     publishMavenStyle := true,
     organization := "com.wajam",
     version := "0.1-SNAPSHOT",
-    scalaVersion := "2.9.1"
+    scalaVersion := "2.9.1",
+    crossScalaVersions := Seq("2.10.0")
   )
 
   lazy val root = Project("scn", file("."))
