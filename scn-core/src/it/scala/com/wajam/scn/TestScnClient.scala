@@ -33,7 +33,7 @@ class TestScnClient extends FunSuite with MockitoSugar with BeforeAndAfter {
     val manager = new StaticClusterManager
     cluster = new Cluster(new LocalNode(Map("nrv" -> 49999, "scn" -> 50000)), manager)
 
-    val protocol = new NrvProtocol(cluster.localNode)
+    val protocol = new NrvProtocol(cluster.localNode, 10000, 100)
     cluster.registerProtocol(protocol)
 
     scn = new Scn("scn", Some(protocol), ScnConfig(), StorageType.MEMORY)
