@@ -29,7 +29,7 @@ object ScnBuild extends Build {
     "com.wajam" %% "nrv-zookeeper" % "0.1-SNAPSHOT",
     "com.wajam" %% "nrv-scribe" % "0.1-SNAPSHOT",
     "com.yammer.metrics" % "metrics-graphite" % "2.2.0" exclude("org.slf4j", "slf4j-api"),
-    "org.rogach" %% "scallop" % "0.6.3",
+    "org.rogach" %% "scallop" % "0.9.1",
     "org.scalatest" %% "scalatest" % "1.9.1" % "test,it",
     "junit" % "junit" % "4.10" % "test,it",
     "org.mockito" % "mockito-core" % "1.9.0" % "test,it"
