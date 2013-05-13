@@ -51,18 +51,18 @@ object ScnTestingClient extends App with Logging {
         "is used the example would look like: \"127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002/app/a\" " +
         "where the client would be rooted at \"/app/a\" and all paths would be relative to this root")
 
-    override protected def onError(e: Throwable) = e match {
-      case Help =>
-        builder.printHelp
-        sys.exit(0)
-      case _ =>
-        println("Error: %s".format(e.getMessage))
-        println()
-        builder.printHelp
-        sys.exit(1)
+    override protected def onError(e: Throwable) {
+      e match {
+        case _: Help =>
+          builder.printHelp()
+          sys.exit(0)
+        case _ =>
+          println("Error: %s".format(e.getMessage))
+          println()
+          builder.printHelp()
+          sys.exit(1)
+      }
     }
-
-    verify
   }
 
   PropertyConfigurator.configureAndWatch(new URL(System.getProperty("log4j.configuration")).getFile, 5000)
