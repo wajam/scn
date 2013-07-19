@@ -35,8 +35,8 @@ fi
 # Java flags
 JAVA_FLAGS="-XX:+UseG1GC -XX:MaxGCPauseMillis=500 -Xms$JAVA_XMS -Xmx$JAVA_XMX -Xss$JAVA_XSS -Xmn$JAVA_XMN -Dcom.sun.management.jmxremote.port=$JAVA_JMX_PORT -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Djava.net.preferIPv4Stack=true -XX:+UseCompressedOops -Dnetworkaddress.cache.negative.ttl=0 -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"
 JAVA_LOGGING="-Dlog4j.configuration=file://$SCN_HOME/etc/log4j.properties"
-SCALA_ACTOR_THREAD_POOL_SIZE="-Dactors.corePoolSize=300"
+SCALA_ACTOR_THREAD_POOL="-Dactors.corePoolSize=300 -Dactors.enableForkJoin=false"
 
-export JAVA_OPTS="$JAVA_FLAGS $JAVA_LOGGING $SCALA_ACTOR_THREAD_POOL_SIZE $1"
+export JAVA_OPTS="$JAVA_FLAGS $JAVA_LOGGING $SCALA_ACTOR_THREAD_POOL $1"
 export PATH=$JAVA_EXEC:$PATH
 $SCN_HOME/scn-core/target/start $* &> $SCN_CONSOLE_LOG
