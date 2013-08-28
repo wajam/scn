@@ -93,8 +93,8 @@ class ScnConfiguration(config: Configuration) {
     config.getInt("scn.trace.scribe.port", 1463)
   }
 
-  def getTraceScribeSamplingRate: Int = {
-    config.getInt("scn.trace.scribe.sampling_rate", 1000)
+  def getTraceSamplingRate: Int = {
+    config.getInt("scn.trace.sampling_rate", 1000)
   }
 }
 

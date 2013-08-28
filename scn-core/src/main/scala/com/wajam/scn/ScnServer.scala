@@ -26,7 +26,7 @@ class ScnServer(config: ScnConfiguration) extends Logging {
 
   // Tracing
   val traceRecorder = if (config.isTraceEnabled) {
-    new ScribeTraceRecorder(config.getTraceScribeHost, config.getTraceScribePort, config.getTraceScribeSamplingRate)
+    new ScribeTraceRecorder(config.getTraceScribeHost, config.getTraceScribePort)
   } else {
     NullTraceRecorder
   }
@@ -46,7 +46,7 @@ class ScnServer(config: ScnConfiguration) extends Logging {
   }
 
   val cluster = new Cluster(node, clusterManager,
-    actionSupportOptions = new ActionSupportOptions(tracer = Some(new Tracer(traceRecorder))))
+    actionSupportOptions = new ActionSupportOptions(tracer = Some(new Tracer(traceRecorder, samplingRate = config.getTraceSamplingRate))))
 
   // Sequence number generator
   val scnStorage = config.getScnSequenceStorage
