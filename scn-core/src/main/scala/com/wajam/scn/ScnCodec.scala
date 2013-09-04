@@ -27,7 +27,7 @@ class ScnCodec extends Codec {
 
 object ScnCodec {
   // Source: http://docs.oracle.com/javase/6/docs/platform/serialization/spec/protocol.html
-  private val JavaSerializeMagicShort : Short = (0xACED).toShort
+  private val JavaSerializeMagicShort: Short = (0xACED).toShort
 
   private val genericCodec = new GenericJavaSerializeCodec
 }
@@ -43,8 +43,10 @@ private[scn] class ScnInternalTranslator {
       case null => {
         transport.setType(PTransport.Type.Empty)
       }
-      case list: List[SequenceRange] if list.forall(_.isInstanceOf[SequenceRange]) => {
-        list.foreach((psr) => transport.addSequenceRanges(encodeSequenceRange(psr)))
+      case list: List[_] if list.forall(_.isInstanceOf[SequenceRange]) => {
+        list foreach {
+          case psr: SequenceRange => transport.addSequenceRanges(encodeSequenceRange(psr))
+        }
         transport.setType(PTransport.Type.ListSequenceRange)
       }
 
