@@ -34,7 +34,8 @@ class SequenceActor[T](name: String, storage: ScnStorage[T],
   def act() {
     loop {
       react {
-        case (cb: ((List[T], Option[Exception]) => Unit), nb: Int, queuedTime: Long) =>
+        case (untypedCb: Function2[_, _, _], nb: Int, queuedTime: Long) =>
+          val cb = untypedCb.asInstanceOf[(List[T], Option[Exception]) => Unit]
           try {
             if (queuedTime + messageExpirationMs > currentTime) {
               val nextRange = storage.next(nb)

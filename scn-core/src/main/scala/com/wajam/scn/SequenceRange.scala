@@ -1,5 +1,7 @@
 package com.wajam.scn
 
+import scala.language.implicitConversions
+
 /**
  * Describe a sequence range
  *
