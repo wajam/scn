@@ -7,10 +7,13 @@ import com.wajam.nrv.cluster.{Node, Cluster, LocalNode, TestingClusterInstance}
 import com.wajam.nrv.tracing.Tracer
 import com.wajam.nrv.service.{MemberStatus, ActionSupportOptions, Resolver}
 import com.wajam.nrv.zookeeper.cluster.{ZookeeperTestingClusterDriver, ZookeeperClusterManager}
-import com.wajam.nrv.utils.{NullLogging, Future, Promise}
+import com.wajam.nrv.utils.NullLogging
 import org.scalatest.matchers.ShouldMatchers._
 import com.wajam.nrv.Logging
 import com.wajam.nrv.scribe.ScribeTraceRecorder
+import scala.concurrent.{Future, Promise, Await}
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class TestScn extends FunSuite with BeforeAndAfter {
 
@@ -73,7 +76,7 @@ class TestScn extends FunSuite with BeforeAndAfter {
       scnClient.fetchSequenceIds(sequenceName, (sequence: Seq[Long], exception) => {
         warmup.success(true)
       }, 1, -1)
-      Future.blocking(warmup.future)
+      Await.result(warmup.future, Duration.Inf)
 
       // Create multiple workers which fetch new sequences until asked to stop
       val workerCount = 5
@@ -86,7 +89,7 @@ class TestScn extends FunSuite with BeforeAndAfter {
         // Fetching loop
         val p = Promise[Seq[Long]]
         workers = p.future :: workers
-        Future.future[Seq[Long]]({
+        Future({
           var result = List[Long]()
           while (!stopLatch.future.isCompleted && !p.future.isCompleted) {
             Log.info("### Fetching sequence for worker {}", i)
@@ -117,7 +120,7 @@ class TestScn extends FunSuite with BeforeAndAfter {
       stopLatch.success(true)
 
       // Collect results
-      val allSequences = workers.flatMap(Future.blocking(_))
+      val allSequences = workers.flatMap(Await.result(_, Duration.Inf))
       allSequences.size should be(allSequences.distinct.size)
       Log.info("### STOPED")
 
