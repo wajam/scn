@@ -6,13 +6,15 @@ import com.wajam.nrv.zookeeper.ZookeeperClient
 import com.wajam.nrv.zookeeper.ZookeeperClient._
 import org.scalatest.{BeforeAndAfter, FunSuite}
 import org.scalatest.matchers.ShouldMatchers._
-import com.wajam.nrv.utils.{ControlableCurrentTime, Future}
+import com.wajam.nrv.utils.ControlableCurrentTime
 import com.wajam.scn.storage.ZookeeperSequenceStorage._
 import com.wajam.scn.SequenceRange
 import com.wajam.nrv.cluster.{Node, LocalNode, Cluster}
 import com.wajam.nrv.service.{MemberStatus, ServiceMember, Service}
 import com.wajam.nrv.NotifiableStaticClusterManager
-
+import scala.concurrent.{Future, Await}
+import scala.concurrent.duration.Duration
+import scala.concurrent.ExecutionContext.Implicits.global
 
 @RunWith(classOf[JUnitRunner])
 class TestZookeeperSequenceStorage extends FunSuite with BeforeAndAfter {
@@ -151,11 +153,11 @@ class TestZookeeperSequenceStorage extends FunSuite with BeforeAndAfter {
     // Request sequences concurently (one thread per storage)
     val iterations = 25
     val countPerCall = 51
-    val workers = storages.map(storage => Future.future({
+    val workers = storages.map(storage => Future({
       for (i <- 1 to iterations) yield SequenceRange.ranges2sequence(storage.next(countPerCall))
     }))
 
-    val all = for (worker <- workers) yield Future.blocking(worker)
+    val all = for (worker <- workers) yield Await.result(worker, Duration.Inf)
     val allFlatten = all.flatten.flatten.toList
     allFlatten.size should be(workers.size * countPerCall * iterations)
     allFlatten.size should be(allFlatten.distinct.size)
