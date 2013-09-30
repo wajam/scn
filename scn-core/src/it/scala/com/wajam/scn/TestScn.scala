@@ -7,13 +7,13 @@ import com.wajam.nrv.cluster.{Node, Cluster, LocalNode, TestingClusterInstance}
 import com.wajam.nrv.tracing.Tracer
 import com.wajam.nrv.service.{MemberStatus, ActionSupportOptions, Resolver}
 import com.wajam.nrv.zookeeper.cluster.{ZookeeperTestingClusterDriver, ZookeeperClusterManager}
-import com.wajam.nrv.utils.NullLogging
 import org.scalatest.matchers.ShouldMatchers._
 import com.wajam.nrv.Logging
 import com.wajam.nrv.scribe.ScribeTraceRecorder
 import scala.concurrent.{Future, Promise, Await}
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
+import com.wajam.commons.NullLogging
 
 class TestScn extends FunSuite with BeforeAndAfter {
 

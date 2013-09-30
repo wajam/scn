@@ -4,7 +4,7 @@ import actors.Actor
 
 import storage.ScnStorage
 import com.yammer.metrics.scala.Instrumented
-import com.wajam.nrv.utils.CurrentTime
+import com.wajam.commons.CurrentTime
 
 
 /**

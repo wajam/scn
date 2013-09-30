@@ -2,9 +2,9 @@ package com.wajam.scn.storage
 
 import org.scalatest.FunSuite
 import org.scalatest.matchers.ShouldMatchers._
-import com.wajam.nrv.utils.ControlableCurrentTime
 import com.wajam.scn.storage.ScnTimestamp._
-import com.wajam.nrv.utils.timestamp.Timestamp
+import com.wajam.commons.timestamp.Timestamp
+import com.wajam.commons.ControlableCurrentTime
 
 class TestInMemoryTimestampStorage extends FunSuite {
   test("increment") {

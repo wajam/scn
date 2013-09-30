@@ -6,7 +6,6 @@ import com.wajam.nrv.zookeeper.ZookeeperClient
 import com.wajam.nrv.zookeeper.ZookeeperClient._
 import org.scalatest.{BeforeAndAfter, FunSuite}
 import org.scalatest.matchers.ShouldMatchers._
-import com.wajam.nrv.utils.ControlableCurrentTime
 import com.wajam.scn.storage.ZookeeperSequenceStorage._
 import com.wajam.scn.SequenceRange
 import com.wajam.nrv.cluster.{Node, LocalNode, Cluster}
@@ -15,6 +14,7 @@ import com.wajam.nrv.NotifiableStaticClusterManager
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration.Duration
 import scala.concurrent.ExecutionContext.Implicits.global
+import com.wajam.commons.ControlableCurrentTime
 
 @RunWith(classOf[JUnitRunner])
 class TestZookeeperSequenceStorage extends FunSuite with BeforeAndAfter {

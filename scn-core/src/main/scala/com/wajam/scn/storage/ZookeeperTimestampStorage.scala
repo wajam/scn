@@ -4,12 +4,12 @@ import com.wajam.nrv.zookeeper.ZookeeperClient
 import com.wajam.nrv.zookeeper.ZookeeperClient._
 import com.wajam.scn.SequenceRange
 import com.wajam.nrv.Logging
-import com.wajam.nrv.utils.CurrentTime
 import org.apache.zookeeper.data.Stat
 import org.apache.zookeeper.KeeperException
 import com.wajam.nrv.zookeeper.service.ZookeeperService
 import com.wajam.scn.storage.ZookeeperTimestampStorage._
-import com.wajam.nrv.utils.timestamp.Timestamp
+import com.wajam.commons.timestamp.Timestamp
+import com.wajam.commons.CurrentTime
 
 /**
  * Sequence storage that stores timestamps in Zookeeper

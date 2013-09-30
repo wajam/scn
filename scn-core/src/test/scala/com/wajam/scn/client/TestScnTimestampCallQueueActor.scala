@@ -10,7 +10,7 @@ import scala.collection.JavaConversions._
 import com.wajam.nrv.TimeoutException
 import com.wajam.scn.MockScn
 import com.wajam.scn.storage.ScnTimestamp._
-import com.wajam.nrv.utils.timestamp.Timestamp
+import com.wajam.commons.timestamp.Timestamp
 
 /**
  *

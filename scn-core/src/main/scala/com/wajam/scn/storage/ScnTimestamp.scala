@@ -1,7 +1,7 @@
 package com.wajam.scn.storage
 
 import com.wajam.scn.SequenceRange
-import com.wajam.nrv.utils.timestamp.Timestamp
+import com.wajam.commons.timestamp.Timestamp
 import scala.language.implicitConversions
 
 /**

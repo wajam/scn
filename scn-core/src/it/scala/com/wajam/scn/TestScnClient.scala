@@ -13,7 +13,7 @@ import java.util.concurrent.{TimeUnit, CountDownLatch}
 import org.mockito.Matchers
 import org.scalatest.mock.MockitoSugar
 import collection.mutable
-import com.wajam.nrv.utils.timestamp.Timestamp
+import com.wajam.commons.timestamp.Timestamp
 
 /**
  * Description
