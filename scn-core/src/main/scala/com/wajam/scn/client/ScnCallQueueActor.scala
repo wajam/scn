@@ -13,7 +13,7 @@ import com.wajam.nrv.service.Resolver
 import math._
 import scala.Left
 import com.wajam.scn.storage.ScnTimestamp
-import com.wajam.commons.timestamp.Timestamp
+import com.wajam.nrv.utils.timestamp.Timestamp
 
 /**
  * Actor that batches scn calls to get sequence numbers. It periodically call scn to get sequence numbers and then

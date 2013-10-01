@@ -8,8 +8,8 @@ import org.apache.zookeeper.data.Stat
 import org.apache.zookeeper.KeeperException
 import com.wajam.nrv.zookeeper.service.ZookeeperService
 import com.wajam.scn.storage.ZookeeperTimestampStorage._
-import com.wajam.commons.timestamp.Timestamp
 import com.wajam.commons.CurrentTime
+import com.wajam.nrv.utils.timestamp.Timestamp
 
 /**
  * Sequence storage that stores timestamps in Zookeeper

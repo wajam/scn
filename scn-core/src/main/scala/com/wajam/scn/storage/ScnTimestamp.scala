@@ -1,8 +1,8 @@
 package com.wajam.scn.storage
 
 import com.wajam.scn.SequenceRange
-import com.wajam.commons.timestamp.Timestamp
 import scala.language.implicitConversions
+import com.wajam.nrv.utils.timestamp.Timestamp
 
 /**
  * Timestamp used to represent mutation time on storage

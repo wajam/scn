@@ -12,7 +12,7 @@ import org.rogach.scallop.ScallopConf
 import org.rogach.scallop.exceptions.Help
 import org.apache.log4j.PropertyConfigurator
 import java.net.URL
-import com.wajam.commons.timestamp.Timestamp
+import com.wajam.nrv.utils.timestamp.Timestamp
 
 object ScnTestingClient extends App with Logging {
 

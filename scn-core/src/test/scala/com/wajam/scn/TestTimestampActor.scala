@@ -8,8 +8,8 @@ import storage.{ScnTimestamp, InMemoryTimestampStorage, ScnStorage}
 import org.scalatest.mock.MockitoSugar
 import org.mockito.Mockito._
 import org.scalatest.matchers.ShouldMatchers._
-import com.wajam.commons.timestamp.Timestamp
 import com.wajam.commons.CurrentTime
+import com.wajam.nrv.utils.timestamp.Timestamp
 
 @RunWith(classOf[JUnitRunner])
 class TestTimestampActor extends FunSuite with BeforeAndAfter with MockitoSugar {
