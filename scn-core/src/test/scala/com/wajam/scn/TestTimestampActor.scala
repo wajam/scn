@@ -8,7 +8,7 @@ import storage.{ScnTimestamp, InMemoryTimestampStorage, ScnStorage}
 import org.scalatest.mock.MockitoSugar
 import org.mockito.Mockito._
 import org.scalatest.matchers.ShouldMatchers._
-import com.wajam.nrv.utils.CurrentTime
+import com.wajam.commons.CurrentTime
 import com.wajam.nrv.utils.timestamp.Timestamp
 
 @RunWith(classOf[JUnitRunner])

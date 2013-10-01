@@ -5,11 +5,11 @@ import com.wajam.nrv.zookeeper.ZookeeperClient._
 import com.wajam.scn.SequenceRange
 import com.wajam.nrv.zookeeper.service.ZookeeperService
 import com.wajam.scn.storage.ZookeeperSequenceStorage._
-import com.wajam.nrv.utils.{Event, CurrentTime}
 import math._
 import com.yammer.metrics.scala.Instrumented
 import com.wajam.nrv.service.{MemberStatus, StatusTransitionEvent, Service}
 import java.util.concurrent.atomic.AtomicBoolean
+import com.wajam.commons.{Event, CurrentTime}
 
 /**
  * Sequence storage that stores sequences in Zookeeper
