@@ -5,9 +5,9 @@ import org.junit.runner.RunWith
 import com.wajam.nrv.zookeeper.ZookeeperClient
 import org.scalatest.{BeforeAndAfter, FunSuite}
 import org.scalatest.matchers.ShouldMatchers._
-import com.wajam.nrv.utils.{CurrentTime, ControlableCurrentTime}
 import com.wajam.scn.storage.ZookeeperTimestampStorage._
 import com.wajam.scn.storage.ScnTimestamp._
+import com.wajam.commons.{CurrentTime, ControlableCurrentTime}
 import com.wajam.nrv.utils.timestamp.Timestamp
 
 @RunWith(classOf[JUnitRunner])

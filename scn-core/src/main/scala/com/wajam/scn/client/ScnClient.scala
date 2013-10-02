@@ -4,7 +4,7 @@ import com.yammer.metrics.scala.Instrumented
 import java.util.concurrent._
 import scala.collection.JavaConversions._
 import com.wajam.scn.{SequenceRange, Scn}
-import com.wajam.nrv.utils.timestamp.{TimestampGenerator, Timestamp}
+import com.wajam.nrv.utils.timestamp.{Timestamp, TimestampGenerator}
 
 /**
  * Scn client that front the SCN service and batches Scn calls to avoid excessive round trips between the

@@ -1,7 +1,7 @@
 package com.wajam.scn.storage
 
 import com.wajam.scn.SequenceRange
-import com.wajam.nrv.utils.CurrentTime
+import com.wajam.commons.CurrentTime
 
 /**
  * Sequence storage that doesn't storage sequence timestamps, but keep it in memory.
