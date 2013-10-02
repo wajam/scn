@@ -1,7 +1,7 @@
 package com.wajam.scn.client
 
 import collection.mutable
-import com.wajam.nrv.tracing.TraceContext
+import com.wajam.tracing.TraceContext
 
 /**
  * A queue to manage scn callbacks waiting for sequence/timestamps.

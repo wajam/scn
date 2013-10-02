@@ -1,6 +1,6 @@
 package com.wajam.scn.client
 
-import com.wajam.nrv.tracing.Traced
+import com.wajam.tracing.Traced
 import com.wajam.scn.{SequenceRange, Scn}
 import java.util.concurrent.TimeUnit
 import actors.Actor
