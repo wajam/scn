@@ -4,7 +4,7 @@ import client.{ScnClientConfig, ScnClient}
 import org.scalatest.{BeforeAndAfter, FunSuite}
 import storage.StorageType
 import com.wajam.nrv.cluster.{Node, Cluster, LocalNode, TestingClusterInstance}
-import com.wajam.nrv.tracing.Tracer
+import com.wajam.tracing.Tracer
 import com.wajam.nrv.service.{MemberStatus, ActionSupportOptions, Resolver}
 import com.wajam.nrv.zookeeper.cluster.{ZookeeperTestingClusterDriver, ZookeeperClusterManager}
 import org.scalatest.matchers.ShouldMatchers._
