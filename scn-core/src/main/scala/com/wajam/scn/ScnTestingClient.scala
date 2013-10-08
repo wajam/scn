@@ -6,7 +6,7 @@ import com.wajam.nrv.cluster.{Cluster, LocalNode}
 import com.wajam.nrv.zookeeper.cluster.ZookeeperClusterManager
 import com.wajam.nrv.service.ActionSupportOptions
 import storage.StorageType
-import com.wajam.nrv.Logging
+import com.wajam.commons.Logging
 import java.text.SimpleDateFormat
 import org.rogach.scallop.ScallopConf
 import org.rogach.scallop.exceptions.Help

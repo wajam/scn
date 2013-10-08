@@ -8,7 +8,7 @@ import com.wajam.tracing.Tracer
 import com.wajam.nrv.service.{MemberStatus, ActionSupportOptions, Resolver}
 import com.wajam.nrv.zookeeper.cluster.{ZookeeperTestingClusterDriver, ZookeeperClusterManager}
 import org.scalatest.matchers.ShouldMatchers._
-import com.wajam.nrv.Logging
+import com.wajam.commons.Logging
 import com.wajam.nrv.scribe.ScribeTraceRecorder
 import scala.concurrent.{Future, Promise, Await}
 import scala.concurrent.duration._
