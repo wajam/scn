@@ -2,7 +2,7 @@ package com.wajam.scn
 
 import org.apache.commons.configuration.tree.OverrideCombiner
 import org.apache.commons.configuration.{Configuration, PropertiesConfiguration, CombinedConfiguration}
-import com.wajam.nrv.Logging
+import com.wajam.commons.Logging
 import scala.collection.JavaConversions._
 
 class ScnConfiguration(config: Configuration) {

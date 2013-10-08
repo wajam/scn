@@ -4,7 +4,8 @@ import com.wajam.tracing.Traced
 import com.wajam.scn.{SequenceRange, Scn}
 import java.util.concurrent.TimeUnit
 import actors.Actor
-import com.wajam.nrv.{UnavailableException, TimeoutException, Logging}
+import com.wajam.commons.Logging
+import com.wajam.nrv.{UnavailableException, TimeoutException}
 import com.yammer.metrics.scala.Instrumented
 import java.util.{TimerTask, Timer}
 import collection.mutable

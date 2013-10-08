@@ -1,7 +1,7 @@
 package com.wajam.scn
 
 import storage.StorageType
-import com.wajam.nrv.Logging
+import com.wajam.commons.Logging
 
 /**
  * 

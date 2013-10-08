@@ -7,7 +7,7 @@ import java.util.concurrent._
 import scala.collection.JavaConversions._
 import com.wajam.nrv.zookeeper.ZookeeperClient
 import com.wajam.nrv.protocol.Protocol
-import com.wajam.nrv.Logging
+import com.wajam.commons.Logging
 import com.yammer.metrics.scala.Instrumented
 import com.wajam.nrv.data.{MString, MInt}
 
