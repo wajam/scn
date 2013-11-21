@@ -2,14 +2,15 @@ package com.wajam.scn.storage
 
 import com.wajam.scn.SequenceRange
 import com.wajam.commons.CurrentTime
+import com.wajam.nrv.utils.timestamp.Timestamp
 
 /**
  * Sequence storage that doesn't storage sequence timestamps, but keep it in memory.
  */
-class InMemoryTimestampStorage extends ScnStorage[SequenceRange] with CurrentTime {
+class InMemoryTimestampStorage(clock: CurrentTime = new CurrentTime {}) extends ScnStorage[SequenceRange] {
 
-  private var lastTime = currentTime
-  private var lastSeq = SequenceRange(0, 1)
+  private var lastTime = clock.currentTime
+  private var lastTimeEndSeq: Int = 0
 
   /**
    * Get next sequence for given count.
@@ -19,23 +20,21 @@ class InMemoryTimestampStorage extends ScnStorage[SequenceRange] with CurrentTim
    * @return Inclusive from and to sequence
    */
   def next(count: Int): List[SequenceRange] = {
-    var reqTime = currentTime
+    val now = clock.currentTime
 
-    while (lastSeq.length != count) {
-      lastSeq = if (lastTime == reqTime) {
-        SequenceRange(lastSeq.to, lastSeq.to + count)
-      } else if (lastTime < reqTime) {
-        SequenceRange(1, count + 1)
-      } else {
-        reqTime = currentTime
-        SequenceRange(0, 0)
-      }
+    if (lastTime > now) {
+      // Clock is late for some reason
+      lastTimeEndSeq = 0
+      Nil
+    } else {
+      // If already returned some timestamps in the same ms, continue the sequence for this ms. Never overflow the
+      // sequence whether this is the same ms or a new ms.
+      val startSeq = if (lastTime == now) lastTimeEndSeq else 0
+      val endSeq = math.min(Timestamp.SeqPerMs, startSeq + count)
+      val startTs = Timestamp(now, startSeq)
+      lastTimeEndSeq = endSeq
+      lastTime = now
+      List(SequenceRange(startTs.value, startTs.value + endSeq - startSeq))
     }
-
-    lastTime = reqTime
-
-    val from = ScnTimestamp(lastTime, lastSeq.from).value
-    val to = from + lastSeq.length
-    List(SequenceRange(from, to))
   }
 }

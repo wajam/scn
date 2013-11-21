@@ -6,25 +6,27 @@ import com.wajam.nrv.zookeeper.ZookeeperClient
 import org.scalatest.{BeforeAndAfter, FunSuite}
 import org.scalatest.matchers.ShouldMatchers._
 import com.wajam.scn.storage.ZookeeperTimestampStorage._
-import com.wajam.scn.storage.ScnTimestamp._
 import com.wajam.commons.{CurrentTime, ControlableCurrentTime}
 import com.wajam.nrv.utils.timestamp.Timestamp
 
 @RunWith(classOf[JUnitRunner])
 class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
-  val tsName = "it_ts_tests"
+  val sequenceName = "it_ts_tests"
   val zkServerAddress = "127.0.0.1/tests"
+  val saveAheadInMs = 5000
+  val clock = new ControlableCurrentTime {}
   var zkClient: ZookeeperClient = null
   var storage: ZookeeperTimestampStorage = null
 
   before {
     zkClient = new ZookeeperClient(zkServerAddress)
     try {
-      zkClient.delete(timestampPath(tsName))
+      zkClient.delete(timestampPath(sequenceName))
     } catch {
       case e: Exception =>
     }
-    storage = new ZookeeperTimestampStorage(zkClient, tsName, 5000, 1000)
+    clock.currentTime = 10L
+    storage = new ZookeeperTimestampStorage(zkClient, sequenceName, saveAheadInMs, 1000, clock)
   }
 
   after {
@@ -33,47 +35,38 @@ class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
     zkClient = null
   }
 
-  test("increment") {
-    val range: List[Timestamp] = storage.next(10)
+  test("should generate sequence of timestamps") {
+    val now = clock.currentTime
+    val range: List[Timestamp] = storage.next(5)
 
-    // Test the order of increment
-    assert(range.sortWith((t1, t2) => t1.compareTo(t2) == -1) == range, range)
-    assert(range.size == 10, range.size)
+    range should be(List(Timestamp(now, 0), Timestamp(now, 1), Timestamp(now, 2), Timestamp(now, 3), Timestamp(now, 4)))
+    range.size should be(5)
   }
 
-  test("unicity of generated ids") {
-    val unique = ScnTimestamp.ranges2timestamps(storage.next(10) ::: storage.next(20) ::: storage.next(30))
-    Thread.sleep(2000)
-    val unique2 = ScnTimestamp.ranges2timestamps(unique ::: storage.next(20))
-
-    unique2 should be(unique2.distinct)
-    unique.size should be(60)
-  }
-
-  test("should be expected timestamp value") {
-    val storage = new ZookeeperTimestampStorage(zkClient, tsName, 5000, 1000) with ControlableCurrentTime
-    val values: List[Timestamp] = storage.next(1)
-    values(0) should be(ScnTimestamp(storage.currentTime, 0))
-  }
-
-  test("counter head position in zookeeper") {
-    val head = storage.saveAheadTimestamp
-
+  test("save ahead position in zookeeper") {
     storage.next(1)
-    // Wait 2 times to Save ahead time to make sure a new head is written
-    Thread.sleep(storage.saveAheadInMs * 2)
-    storage.next(1)
+    val expectedInitialSaveAhead = Timestamp(clock.currentTime + saveAheadInMs, 0)
+    storage.saveAheadTimestamp should be(expectedInitialSaveAhead)
 
-    // Head saved in Zookeeper must be smaller than now + save_ahead time since the request is done
-    assert(head < ScnTimestamp(System.currentTimeMillis() + storage.saveAheadInMs, 0), head)
+    // ZK save ahead does not change if time advance less than reserved time
+    clock.currentTime += saveAheadInMs / 2
+    storage.next(1)
+    storage.saveAheadTimestamp should be(expectedInitialSaveAhead)
+
+    // ZK save ahead change if time advance past reserved time
+    clock.currentTime += saveAheadInMs * 2
+    storage.next(1)
+    storage.saveAheadTimestamp should be(Timestamp(clock.currentTime + saveAheadInMs, 0))
   }
 
   test("storage with drifting clock") {
     val saveAheadMillis = 5000
-    val inTimeStorage = new ZookeeperTimestampStorage(zkClient, tsName, saveAheadMillis, 1000)
-    val onTime: List[Timestamp] = inTimeStorage.next(1)
+    val clock = new ControlableCurrentTime {}
+    val inTimeStorage = new ZookeeperTimestampStorage(zkClient, sequenceName, saveAheadMillis, 1000, clock)
+    val originalRange: List[Timestamp] = inTimeStorage.next(1)
 
-    val otherStorage = new ZookeeperTimestampStorage(zkClient, tsName, saveAheadMillis, 1000) with ControlableCurrentTime
+    val otherClock = new ControlableCurrentTime {}
+    val otherStorage = new ZookeeperTimestampStorage(zkClient, sequenceName, saveAheadMillis, 1000, otherClock)
 
     // Test other storage in time but before save ahead
     evaluating {
@@ -81,65 +74,67 @@ class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
     } should produce [Exception]
 
     // Test other storage with one minute late clock
-    otherStorage.currentTime -= (60 * 1000) // 1 minute late clock
+    otherClock.currentTime -= (60 * 1000) // 1 minute late clock
     evaluating {
       otherStorage.next(1)
     } should produce [Exception]
 
     // Test other storage again after advancing one minute + save ahead
-    otherStorage.currentTime += (60 * 1000 + saveAheadMillis)
-    val backOnTime: List[Timestamp] = otherStorage.next(1)
+    otherClock.currentTime += (60 * 1000 + saveAheadMillis)
+    val laterRange: List[Timestamp] = otherStorage.next(1)
 
-    onTime(0) should be < (backOnTime(0))
+    originalRange(0) should be < laterRange(0)
   }
 
-  test("concurent instances overlaps") {
+  test("concurrent instances overlaps") {
     val saveAheadMillis = 5000
     val renewalMillis = 1000
     val initialTime = new CurrentTime{}.currentTime
 
     val zk1 = new ZookeeperClient(zkServerAddress)
-    val storage1 = new ZookeeperTimestampStorage(zk1, tsName, saveAheadMillis, renewalMillis) with ControlableCurrentTime
+    val clock1 = new ControlableCurrentTime {}
+    val storage1 = new ZookeeperTimestampStorage(zk1, sequenceName, saveAheadMillis, renewalMillis, clock1)
 
     val zk2 = new ZookeeperClient(zkServerAddress)
-    val storage2 = new ZookeeperTimestampStorage(zk2, tsName, saveAheadMillis, renewalMillis) with ControlableCurrentTime
+    val clock2 = new ControlableCurrentTime {}
+    val storage2 = new ZookeeperTimestampStorage(zk2, sequenceName, saveAheadMillis, renewalMillis, clock2)
 
     // First instance initial timestamp
-    storage1.currentTime = initialTime
+    clock1.currentTime = initialTime
     storage1.next(1)
 
     // Second instance not able to generate timestamp until save ahead expires
-    storage2.currentTime = initialTime
+    clock2.currentTime = initialTime
     evaluating {
       storage2.next(1)
     } should produce [Exception]
 
     // Second instance able to generate timestamp at save ahead expiration
-    storage2.currentTime += saveAheadMillis
+    clock2.currentTime += saveAheadMillis
     storage2.next(1)
 
     // First instance not able to generate timestamp anymore at save ahead expiration because second instance is now in charge
-    storage1.currentTime = storage2.currentTime
+    clock1.currentTime = clock2.currentTime
     evaluating {
       storage1.next(1)
     } should produce [Exception]
 
     // Second instance should update save ahead expiration at renewal time before real expiration. Because of this
     // the first instance is not be able to generate a timestamp at the original save ahead expiration time
-    storage2.currentTime += saveAheadMillis - renewalMillis
+    clock2.currentTime += saveAheadMillis - renewalMillis
     storage2.next(1)
 
-    storage1.currentTime += saveAheadMillis
+    clock1.currentTime += saveAheadMillis
     evaluating {
       storage1.next(1)
     } should produce [Exception]
 
     // First instance able to generate timestamp again after save ahead expiration
-    storage1.currentTime += saveAheadMillis
+    clock1.currentTime += saveAheadMillis
     storage1.next(1)
 
     // Now the second instance fail as expected...
-    storage2.currentTime = storage1.currentTime
+    clock2.currentTime = clock1.currentTime
     evaluating {
       storage2.next(1)
     } should produce [Exception]
@@ -148,4 +143,57 @@ class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
     zk2.close()
   }
 
+  test("should continue sequence in same ms") {
+    clock.currentTime = 10L
+    val r1: List[Timestamp] = storage.next(2)
+    val r2: List[Timestamp] = storage.next(1)
+    val r3: List[Timestamp] = storage.next(3)
+
+    r1 should be(List(Timestamp(10L, 0), Timestamp(10L, 1)))
+    r2 should be(List(Timestamp(10L, 2)))
+    r3 should be(List(Timestamp(10L, 3), Timestamp(10L, 4), Timestamp(10L, 5)))
+  }
+
+  test("should reset sequence when starting a new ms") {
+    clock.currentTime = 10L
+    val r1: List[Timestamp] = storage.next(2)
+
+    clock.currentTime = 20L
+    val r2: List[Timestamp] = storage.next(1)
+    val r3: List[Timestamp] = storage.next(3)
+
+    r1 should be(List(Timestamp(10L, 0), Timestamp(10L, 1)))
+    r2 should be(List(Timestamp(20L, 0)))
+    r3 should be(List(Timestamp(20L, 1), Timestamp(20L, 2), Timestamp(20L, 3)))
+  }
+
+  test("should return an empty range if clock is late") {
+    clock.currentTime = 10L
+    storage.next(1) should not be Nil
+    clock.currentTime -= 1
+    storage.next(1) should be(Nil)
+  }
+
+  test("should not overflow when continuing in the same ms") {
+    clock.currentTime = 10L
+    val r1: List[Timestamp] = storage.next(5)
+    val r2: List[Timestamp] = storage.next(Timestamp.SeqPerMs)
+
+    r1 should be(List(Timestamp(10L, 0), Timestamp(10L, 1), Timestamp(10L, 2), Timestamp(10L, 3), Timestamp(10L, 4)))
+    r2.last should be(Timestamp(10L, Timestamp.SeqPerMs - 1))
+    r2.size should be(Timestamp.SeqPerMs - 5)
+  }
+
+  test("should not overflow when starting in a new ms") {
+    clock.currentTime = 10L
+    val r1: List[Timestamp] = storage.next(5)
+
+    clock.currentTime = 20L
+    val r2: List[Timestamp] = storage.next(Timestamp.SeqPerMs)
+
+    r1 should be(List(Timestamp(10L, 0), Timestamp(10L, 1), Timestamp(10L, 2), Timestamp(10L, 3), Timestamp(10L, 4)))
+    r2.head should be(Timestamp(20L, 0))
+    r2.last should be(Timestamp(20L, Timestamp.SeqPerMs - 1))
+    r2.size should be(Timestamp.SeqPerMs)
+  }
 }

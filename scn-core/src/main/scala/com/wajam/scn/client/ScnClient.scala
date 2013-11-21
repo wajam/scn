@@ -53,6 +53,8 @@ class ScnClient(scn: Scn, config: ScnClientConfig = ScnClientConfig()) extends T
    *              selected randomly
    */
   def fetchTimestamps(name: String, cb: (Seq[Timestamp], Option[Exception]) => Unit, nb: Int, token: Long) {
+    metricNbCalls += 1
+
     val timestampActor = timestampStackActors.getOrElse(name, {
       val actor = new ScnTimestampCallQueueActor(scn, name, config.executionRateInMs, config.timeoutInMs,
         timestampExecutors)
@@ -62,9 +64,13 @@ class ScnClient(scn: Scn, config: ScnClientConfig = ScnClientConfig()) extends T
         actor
       })
     })
-    timestampActor ! Batched[Timestamp](ScnCallback[Timestamp](cb, nb, System.currentTimeMillis(), token,
-      scn.service.tracer.currentContext))
-    metricNbCalls += 1
+
+    if (nb > Timestamp.SeqPerMs) {
+      cb(Nil, Some(new IllegalArgumentException(s"Requesting too many timestamps: $nb > ${Timestamp.SeqPerMs}")))
+    } else {
+      timestampActor ! Batched[Timestamp](ScnCallback[Timestamp](cb, nb, System.currentTimeMillis(), token,
+        scn.tracer.currentContext))
+    }
   }
 
   /**
@@ -78,6 +84,8 @@ class ScnClient(scn: Scn, config: ScnClientConfig = ScnClientConfig()) extends T
    *              selected randomly
    */
   def fetchSequenceIds(name: String, cb: (Seq[Long], Option[Exception]) => Unit, nb: Int, token: Long) {
+    metricNbCalls += 1
+
     val sequenceActor = sequenceStackActors.getOrElse(name, {
       val actor = new ScnSequenceCallQueueActor(scn, name, config.executionRateInMs, config.timeoutInMs,
         sequenceExecutors)
@@ -87,9 +95,13 @@ class ScnClient(scn: Scn, config: ScnClientConfig = ScnClientConfig()) extends T
         actor
       })
     })
-    sequenceActor ! Batched[Long](ScnCallback[Long](cb, nb, System.currentTimeMillis(), token,
-      scn.service.tracer.currentContext))
-    metricNbCalls += 1
+
+    if (nb > Timestamp.SeqPerMs) {
+      cb(Nil, Some(new IllegalArgumentException(s"Requesting too many sequence ids: $nb > ${Timestamp.SeqPerMs}")))
+    } else {
+      sequenceActor ! Batched[Long](ScnCallback[Long](cb, nb, System.currentTimeMillis(), token,
+      scn.tracer.currentContext))
+    }
   }
 
   def start() = {

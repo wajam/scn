@@ -14,6 +14,7 @@ import org.mockito.Matchers
 import org.scalatest.mock.MockitoSugar
 import collection.mutable
 import com.wajam.nrv.utils.timestamp.Timestamp
+import org.scalatest.matchers.ShouldMatchers._
 
 /**
  * Description
@@ -118,5 +119,27 @@ class TestScnClient extends FunSuite with MockitoSugar with BeforeAndAfter {
 
     latch.await()
     assert(res.length == 3)
+  }
+
+  test("should fail when requesting too many timestamps") {
+    var error: Option[Exception] = None
+
+    scnClient.fetchTimestamps("1", (seq, optEx) => {
+      error = optEx
+    }, Timestamp.SeqPerMs + 1, -1)
+
+    // This is a synchronous check, no need to wait
+    error should not be None
+  }
+
+  test("should fail when requesting too many sequence ids") {
+    var error: Option[Exception] = None
+
+    scnClient.fetchSequenceIds("1", (seq, optEx) => {
+      error = optEx
+    }, Timestamp.SeqPerMs + 1, -1)
+
+    // This is a synchronous check, no need to wait
+    error should not be None
   }
 }

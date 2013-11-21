@@ -14,7 +14,10 @@ import scala.concurrent.{Future, Promise, Await}
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.wajam.commons.NullLogging
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
 
+@RunWith(classOf[JUnitRunner])
 class TestScn extends FunSuite with BeforeAndAfter {
 
   var testCluster: TestSequenceCluster = _
