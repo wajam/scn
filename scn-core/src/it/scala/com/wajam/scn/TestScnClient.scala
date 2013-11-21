@@ -15,6 +15,7 @@ import org.scalatest.mock.MockitoSugar
 import collection.mutable
 import com.wajam.nrv.utils.timestamp.Timestamp
 import org.scalatest.matchers.ShouldMatchers._
+import language.postfixOps
 
 /**
  * Description
@@ -141,5 +142,39 @@ class TestScnClient extends FunSuite with MockitoSugar with BeforeAndAfter {
 
     // This is a synchronous check, no need to wait
     error should not be None
+  }
+
+  test("fetch timestamps with future") {
+    import scala.concurrent._
+    import ExecutionContext.Implicits.global
+    import scala.concurrent.duration._
+
+    val seq1Future = scnClient.fetchTimestamps("1", Timestamp.SeqPerMs / 4, 0)
+    val seq2Future = scnClient.fetchTimestamps("1", Timestamp.SeqPerMs / 4, 0)
+    val seq3Future = scnClient.fetchTimestamps("1", Timestamp.SeqPerMs, 0)
+
+    // The first two fetch should be batched together
+    val seq1 = Await.result[Seq[Timestamp]](seq1Future, 1 second)
+    val seq2 = Await.result[Seq[Timestamp]](seq2Future, 1 second)
+    seq1.head.timeMs should be(seq2.head.timeMs)
+
+    // The last fetch is not batch because asking for the max sequence per ms
+    val seq3 = Await.result[Seq[Timestamp]](seq3Future, 1 second)
+    seq3.size should be(Timestamp.SeqPerMs)
+  }
+
+  test("fetch sequence ids with future") {
+    import scala.concurrent._
+    import ExecutionContext.Implicits.global
+    import scala.concurrent.duration._
+
+    val seq1Future = scnClient.fetchSequenceIds("1", 200, 0)
+    val seq2Future = scnClient.fetchSequenceIds("1", 200, 0)
+
+    val seq1 = Await.result[Seq[Long]](seq1Future, 1 second)
+    val seq2 = Await.result[Seq[Long]](seq2Future, 1 second)
+    seq1.size should be(200)
+    seq2.size should be(200)
+    seq1.last should be(seq2.head - 1)
   }
 }
