@@ -123,25 +123,14 @@ class TestScnClient extends FunSuite with MockitoSugar with BeforeAndAfter {
   }
 
   test("should fail when requesting too many timestamps") {
-    var error: Option[Exception] = None
+    import scala.concurrent._
+    import ExecutionContext.Implicits.global
+    import scala.concurrent.duration._
 
-    scnClient.fetchTimestamps("1", (seq, optEx) => {
-      error = optEx
-    }, Timestamp.SeqPerMs + 1, -1)
-
-    // This is a synchronous check, no need to wait
-    error should not be None
-  }
-
-  test("should fail when requesting too many sequence ids") {
-    var error: Option[Exception] = None
-
-    scnClient.fetchSequenceIds("1", (seq, optEx) => {
-      error = optEx
-    }, Timestamp.SeqPerMs + 1, -1)
-
-    // This is a synchronous check, no need to wait
-    error should not be None
+    val seqFuture = scnClient.fetchTimestamps("1", Timestamp.SeqPerMs + 1, 0)
+    evaluating {
+      Await.result[Seq[Timestamp]](seqFuture, 1 second)
+    } should produce[IllegalArgumentException]
   }
 
   test("fetch timestamps with future") {

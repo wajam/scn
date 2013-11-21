@@ -113,12 +113,8 @@ class ScnClient(scn: Scn, config: ScnClientConfig = ScnClientConfig()) extends T
       })
     })
 
-    if (nb > Timestamp.SeqPerMs) {
-      cb(Nil, Some(new IllegalArgumentException(s"Requesting too many sequence ids: $nb > ${Timestamp.SeqPerMs}")))
-    } else {
-      sequenceActor ! Batched[Long](ScnCallback[Long](cb, nb, System.currentTimeMillis(), token,
-      scn.tracer.currentContext))
-    }
+    sequenceActor ! Batched[Long](ScnCallback[Long](cb, nb, System.currentTimeMillis(), token,
+    scn.tracer.currentContext))
   }
 
   def fetchSequenceIds(sequenceName: String, count: Int, token: Long)(implicit ec: ExecutionContext): Future[Seq[Long]] = {
