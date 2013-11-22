@@ -15,17 +15,17 @@ import com.wajam.nrv.utils.timestamp.Timestamp
  * Sequence storage that stores timestamps in Zookeeper
  */
 class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String, saveAheadInMs: Int,
-                                saveAheadRenewalInMs: Int, clock: CurrentTime = new CurrentTime {})
-  extends ScnStorage[SequenceRange] with Logging {
+                                saveAheadRenewalInMs: Int, protected val clock: CurrentTime = new CurrentTime {})
+  extends TimestampStorage with Logging {
 
   zkClient.ensureAllExists(timestampPath(name), timestamp2string(-1L))
 
-  private var lastTime = -1L
-  private var lastTimeEndSeq: Int = 0
   private var lastStat = new Stat
   private var savedAhead = string2timestamp(zkClient.getString(timestampPath(name), stat = Some(lastStat)))
 
   private[storage] def saveAheadTimestamp: Timestamp = Timestamp(savedAhead, 0)
+
+  lastTime = -1L
 
   /**
    * Get next sequence boundaries for given count.
@@ -62,20 +62,8 @@ class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String, saveAhe
       }
     }
 
-    if (lastTime > now) {
-      // Clock is late for some reason
-      lastTimeEndSeq = 0
-      Nil
-    } else {
-      // If already returned some timestamps in the same ms, continue the sequence for this ms. Never overflow the
-      // sequence whether this is the same ms or a new ms.
-      val startSeq = if (lastTime == now) lastTimeEndSeq else 0
-      val endSeq = math.min(Timestamp.SeqPerMs, startSeq + count)
-      val startTs = Timestamp(now, startSeq)
-      lastTimeEndSeq = endSeq
-      lastTime = now
-      List(SequenceRange(startTs.value, startTs.value + endSeq - startSeq))
-    }
+    // Generate timestamp sequence
+    next(count, now)
   }
 }
 

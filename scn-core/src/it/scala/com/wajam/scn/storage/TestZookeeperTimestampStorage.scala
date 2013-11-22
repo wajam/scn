@@ -60,13 +60,12 @@ class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
   }
 
   test("storage with drifting clock") {
-    val saveAheadMillis = 5000
     val clock = new ControlableCurrentTime {}
-    val inTimeStorage = new ZookeeperTimestampStorage(zkClient, sequenceName, saveAheadMillis, 1000, clock)
+    val inTimeStorage = new ZookeeperTimestampStorage(zkClient, sequenceName, saveAheadInMs, 1000, clock)
     val originalRange: List[Timestamp] = inTimeStorage.next(1)
 
     val otherClock = new ControlableCurrentTime {}
-    val otherStorage = new ZookeeperTimestampStorage(zkClient, sequenceName, saveAheadMillis, 1000, otherClock)
+    val otherStorage = new ZookeeperTimestampStorage(zkClient, sequenceName, saveAheadInMs, 1000, otherClock)
 
     // Test other storage in time but before save ahead
     evaluating {
@@ -80,24 +79,23 @@ class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
     } should produce [Exception]
 
     // Test other storage again after advancing one minute + save ahead
-    otherClock.currentTime += (60 * 1000 + saveAheadMillis)
+    otherClock.currentTime += (60 * 1000 + saveAheadInMs)
     val laterRange: List[Timestamp] = otherStorage.next(1)
 
     originalRange(0) should be < laterRange(0)
   }
 
   test("concurrent instances overlaps") {
-    val saveAheadMillis = 5000
     val renewalMillis = 1000
     val initialTime = new CurrentTime{}.currentTime
 
     val zk1 = new ZookeeperClient(zkServerAddress)
     val clock1 = new ControlableCurrentTime {}
-    val storage1 = new ZookeeperTimestampStorage(zk1, sequenceName, saveAheadMillis, renewalMillis, clock1)
+    val storage1 = new ZookeeperTimestampStorage(zk1, sequenceName, saveAheadInMs, renewalMillis, clock1)
 
     val zk2 = new ZookeeperClient(zkServerAddress)
     val clock2 = new ControlableCurrentTime {}
-    val storage2 = new ZookeeperTimestampStorage(zk2, sequenceName, saveAheadMillis, renewalMillis, clock2)
+    val storage2 = new ZookeeperTimestampStorage(zk2, sequenceName, saveAheadInMs, renewalMillis, clock2)
 
     // First instance initial timestamp
     clock1.currentTime = initialTime
@@ -110,7 +108,7 @@ class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
     } should produce [Exception]
 
     // Second instance able to generate timestamp at save ahead expiration
-    clock2.currentTime += saveAheadMillis
+    clock2.currentTime += saveAheadInMs
     storage2.next(1)
 
     // First instance not able to generate timestamp anymore at save ahead expiration because second instance is now in charge
@@ -121,16 +119,16 @@ class TestZookeeperTimestampStorage extends FunSuite with BeforeAndAfter {
 
     // Second instance should update save ahead expiration at renewal time before real expiration. Because of this
     // the first instance is not be able to generate a timestamp at the original save ahead expiration time
-    clock2.currentTime += saveAheadMillis - renewalMillis
+    clock2.currentTime += saveAheadInMs - renewalMillis
     storage2.next(1)
 
-    clock1.currentTime += saveAheadMillis
+    clock1.currentTime += saveAheadInMs
     evaluating {
       storage1.next(1)
     } should produce [Exception]
 
     // First instance able to generate timestamp again after save ahead expiration
-    clock1.currentTime += saveAheadMillis
+    clock1.currentTime += saveAheadInMs
     storage1.next(1)
 
     // Now the second instance fail as expected...
