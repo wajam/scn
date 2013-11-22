@@ -2,40 +2,18 @@ package com.wajam.scn.storage
 
 import com.wajam.scn.SequenceRange
 import com.wajam.commons.CurrentTime
+import com.wajam.nrv.utils.timestamp.Timestamp
 
 /**
  * Sequence storage that doesn't storage sequence timestamps, but keep it in memory.
  */
-class InMemoryTimestampStorage extends ScnStorage[SequenceRange] with CurrentTime {
+class InMemoryTimestampStorage(protected val clock: CurrentTime = new CurrentTime {}) extends TimestampStorage {
 
-  private var lastTime = currentTime
-  private var lastSeq = SequenceRange(0, 1)
+  protected var lastTime = clock.currentTime
 
   /**
    * Get next sequence for given count.
    * WARNING: Calls to this function must be synchronized or single threaded
-   *
-   * @param count Number of numbers asked
-   * @return Inclusive from and to sequence
    */
-  def next(count: Int): List[SequenceRange] = {
-    var reqTime = currentTime
-
-    while (lastSeq.length != count) {
-      lastSeq = if (lastTime == reqTime) {
-        SequenceRange(lastSeq.to, lastSeq.to + count)
-      } else if (lastTime < reqTime) {
-        SequenceRange(1, count + 1)
-      } else {
-        reqTime = currentTime
-        SequenceRange(0, 0)
-      }
-    }
-
-    lastTime = reqTime
-
-    val from = ScnTimestamp(lastTime, lastSeq.from).value
-    val to = from + lastSeq.length
-    List(SequenceRange(from, to))
-  }
+  def next(count: Int): List[SequenceRange] = next(count, clock.currentTime)
 }

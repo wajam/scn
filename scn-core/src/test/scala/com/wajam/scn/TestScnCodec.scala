@@ -3,7 +3,10 @@ package com.wajam.scn
 import org.scalatest.{BeforeAndAfter, FunSuite}
 import org.scalatest.matchers.ShouldMatchers
 import com.wajam.nrv.protocol.codec.{Codec, GenericJavaSerializeCodec}
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
 
+@RunWith(classOf[JUnitRunner])
 class TestScnCodec extends FunSuite with ShouldMatchers with BeforeAndAfter {
 
   var codec: Codec = null

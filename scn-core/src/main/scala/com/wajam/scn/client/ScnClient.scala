@@ -1,10 +1,11 @@
 package com.wajam.scn.client
 
 import com.yammer.metrics.scala.Instrumented
-import java.util.concurrent._
+import java.util.concurrent.ConcurrentHashMap
 import scala.collection.JavaConversions._
 import com.wajam.scn.{SequenceRange, Scn}
 import com.wajam.nrv.utils.timestamp.{Timestamp, TimestampGenerator}
+import scala.concurrent.{Future, ExecutionContext}
 
 /**
  * Scn client that front the SCN service and batches Scn calls to avoid excessive round trips between the
@@ -53,6 +54,8 @@ class ScnClient(scn: Scn, config: ScnClientConfig = ScnClientConfig()) extends T
    *              selected randomly
    */
   def fetchTimestamps(name: String, cb: (Seq[Timestamp], Option[Exception]) => Unit, nb: Int, token: Long) {
+    metricNbCalls += 1
+
     val timestampActor = timestampStackActors.getOrElse(name, {
       val actor = new ScnTimestampCallQueueActor(scn, name, config.executionRateInMs, config.timeoutInMs,
         timestampExecutors)
@@ -62,9 +65,29 @@ class ScnClient(scn: Scn, config: ScnClientConfig = ScnClientConfig()) extends T
         actor
       })
     })
-    timestampActor ! Batched[Timestamp](ScnCallback[Timestamp](cb, nb, System.currentTimeMillis(), token,
-      scn.service.tracer.currentContext))
-    metricNbCalls += 1
+
+    if (nb > Timestamp.SeqPerMs) {
+      cb(Nil, Some(new IllegalArgumentException(s"Requesting too many timestamps: $nb > ${Timestamp.SeqPerMs}")))
+    } else {
+      timestampActor ! Batched[Timestamp](ScnCallback[Timestamp](cb, nb, System.currentTimeMillis(), token,
+        scn.tracer.currentContext))
+    }
+  }
+
+  def fetchTimestamps(sequenceName: String, count: Int, token: Long)(implicit ec: ExecutionContext): Future[Seq[Timestamp]] = {
+    import scala.concurrent.promise
+
+    val sequencePromise = promise[Seq[Timestamp]]()
+
+    def callback(sequences: Seq[Timestamp], error: Option[Exception]) {
+      error match {
+        case Some(e) => sequencePromise.failure(e)
+        case None => sequencePromise.success(sequences)
+      }
+    }
+
+    fetchTimestamps(sequenceName, callback, count, token)
+    sequencePromise.future
   }
 
   /**
@@ -78,6 +101,8 @@ class ScnClient(scn: Scn, config: ScnClientConfig = ScnClientConfig()) extends T
    *              selected randomly
    */
   def fetchSequenceIds(name: String, cb: (Seq[Long], Option[Exception]) => Unit, nb: Int, token: Long) {
+    metricNbCalls += 1
+
     val sequenceActor = sequenceStackActors.getOrElse(name, {
       val actor = new ScnSequenceCallQueueActor(scn, name, config.executionRateInMs, config.timeoutInMs,
         sequenceExecutors)
@@ -87,9 +112,25 @@ class ScnClient(scn: Scn, config: ScnClientConfig = ScnClientConfig()) extends T
         actor
       })
     })
+
     sequenceActor ! Batched[Long](ScnCallback[Long](cb, nb, System.currentTimeMillis(), token,
-      scn.service.tracer.currentContext))
-    metricNbCalls += 1
+    scn.tracer.currentContext))
+  }
+
+  def fetchSequenceIds(sequenceName: String, count: Int, token: Long)(implicit ec: ExecutionContext): Future[Seq[Long]] = {
+    import scala.concurrent.promise
+
+    val sequencePromise = promise[Seq[Long]]()
+
+    def callback(sequences: Seq[Long], error: Option[Exception]) {
+      error match {
+        case Some(e) => sequencePromise.failure(e)
+        case None => sequencePromise.success(sequences)
+      }
+    }
+
+    fetchSequenceIds(sequenceName, callback, count, token)
+    sequencePromise.future
   }
 
   def start() = {

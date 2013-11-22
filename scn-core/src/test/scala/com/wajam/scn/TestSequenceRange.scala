@@ -2,7 +2,10 @@ package com.wajam.scn
 
 import org.scalatest.FunSuite
 import org.scalatest.matchers.ShouldMatchers._
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
 
+@RunWith(classOf[JUnitRunner])
 class TestSequenceRange extends FunSuite {
   test("should return proper lenght") {
     val from = 1

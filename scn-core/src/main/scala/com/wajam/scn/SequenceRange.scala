@@ -1,6 +1,7 @@
 package com.wajam.scn
 
 import scala.language.implicitConversions
+import com.wajam.nrv.utils.timestamp.Timestamp
 
 /**
  * Describe a sequence range
@@ -36,5 +37,13 @@ object SequenceRange {
       ranges = SequenceRange(from, nextTo) :: ranges
     }
     ranges.reverse
+  }
+
+  implicit def ranges2timestamps(ranges: Seq[SequenceRange]): List[Timestamp] = {
+    SequenceRange.ranges2sequence(ranges).map(Timestamp(_))
+  }
+
+  implicit def timestamps2ranges(sequence: Seq[Timestamp]): List[SequenceRange] = {
+    SequenceRange.sequence2ranges(sequence.map(_.value))
   }
 }

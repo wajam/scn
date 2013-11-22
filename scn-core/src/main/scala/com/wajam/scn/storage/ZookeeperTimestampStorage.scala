@@ -14,48 +14,46 @@ import com.wajam.nrv.utils.timestamp.Timestamp
 /**
  * Sequence storage that stores timestamps in Zookeeper
  */
-class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String, private[storage] val saveAheadInMs: Int,
-                                saveAheadRenewalInMs: Int)
-  extends ScnStorage[SequenceRange] with CurrentTime with Logging {
+class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String, saveAheadInMs: Int,
+                                saveAheadRenewalInMs: Int, protected val clock: CurrentTime = new CurrentTime {})
+  extends TimestampStorage with Logging {
 
   zkClient.ensureAllExists(timestampPath(name), timestamp2string(-1L))
 
-  private var lastTime = -1L
-  private var lastSeq = SequenceRange(0, 1)
+  protected var lastTime = -1L
   private var lastStat = new Stat
   private var savedAhead = string2timestamp(zkClient.getString(timestampPath(name), stat = Some(lastStat)))
 
-  protected[storage] def saveAheadTimestamp: Timestamp = ScnTimestamp(savedAhead, 0)
+  private[storage] def saveAheadTimestamp: Timestamp = Timestamp(savedAhead, 0)
 
   /**
    * Get next sequence boundaries for given count.
    * WARNING: Calls to this function must be synchronized or single threaded
    *
-   * @param count Number of numbers askeds
-   * @return Inclusive from and to sequence
+   * @param count Number of timestamps to generate
    */
   def next(count: Int): List[SequenceRange] = {
-    var reqTime = currentTime
+    var now = clock.currentTime
 
     // Avoid duplicate ID with drifting *late* clock
-    if (lastTime == -1 && reqTime < savedAhead) {
+    if (lastTime == -1 && now < savedAhead) {
       throw new Exception("Drifting late clock detected.")
     }
 
     // Save ahead update
-    if (ScnTimestamp(reqTime, 0) >= ScnTimestamp(savedAhead - saveAheadRenewalInMs, 0) ) {
+    if (now >= savedAhead - saveAheadRenewalInMs) {
       try {
         // Try to persist save ahead
-        zkClient.set(timestampPath(name), timestamp2string(reqTime + saveAheadInMs), lastStat.getVersion)
+        zkClient.set(timestampPath(name), timestamp2string(now + saveAheadInMs), lastStat.getVersion)
       } catch {
         // Our save ahead version is out of date! Another instance is generating the timestamps!
         case e: KeeperException.BadVersionException =>
-          // Reset our last known serve time as this instance We cannot generate new timetsamps until save ahead is
+          // Reset our last known serve time as this instance We cannot generate new timestamps until save ahead is
           // expired.
           lastTime = -1L
 
-          // Avoid duplicate ID with concurent generation
-          throw new Exception("Concurent timestamps generation detected.", e)
+          // Avoid duplicate ID with concurrent generation
+          throw new Exception("Concurrent timestamps generation detected.", e)
       }
       finally {
         // Need to get the latest save ahead value and version no matter if save ahead persistence was successful or not
@@ -63,25 +61,8 @@ class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String, private
       }
     }
 
-    while (lastSeq.length != count) {
-      lastSeq = if (lastTime == reqTime) {
-        if (lastSeq.to > ScnTimestamp.MAX_SEQ_NO) {
-          throw new Exception("Maximum sequence number exceeded for timestamp in this millisecond.")
-        }
-        SequenceRange(lastSeq.to, lastSeq.to + count)
-      } else if (lastTime < reqTime) {
-        SequenceRange(1, count + 1)
-      } else {
-        // Clock is late for some reason
-        reqTime = currentTime
-        SequenceRange(0, 0)
-      }
-    }
-
-    lastTime = reqTime
-    val from = ScnTimestamp(lastTime, lastSeq.from).value
-    val to = from + lastSeq.length
-    List(SequenceRange(from, to))
+    // Generate timestamp sequence
+    next(count, now)
   }
 }
 
