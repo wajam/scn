@@ -20,12 +20,11 @@ class ZookeeperTimestampStorage(zkClient: ZookeeperClient, name: String, saveAhe
 
   zkClient.ensureAllExists(timestampPath(name), timestamp2string(-1L))
 
+  protected var lastTime = -1L
   private var lastStat = new Stat
   private var savedAhead = string2timestamp(zkClient.getString(timestampPath(name), stat = Some(lastStat)))
 
   private[storage] def saveAheadTimestamp: Timestamp = Timestamp(savedAhead, 0)
-
-  lastTime = -1L
 
   /**
    * Get next sequence boundaries for given count.

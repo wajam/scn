@@ -7,8 +7,10 @@ import com.wajam.commons.CurrentTime
 trait TimestampStorage extends ScnStorage[SequenceRange] {
   protected def clock: CurrentTime
 
-  protected var lastTime = clock.currentTime
   private var lastTimeEndSeq: Int = 0
+
+  protected def lastTime: Long
+  protected def lastTime_=(newTime: Long)
 
   def next(count: Int, now: Long): List[SequenceRange] = {
     if (lastTime > now) {

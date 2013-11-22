@@ -9,6 +9,8 @@ import com.wajam.nrv.utils.timestamp.Timestamp
  */
 class InMemoryTimestampStorage(protected val clock: CurrentTime = new CurrentTime {}) extends TimestampStorage {
 
+  protected var lastTime = clock.currentTime
+
   /**
    * Get next sequence for given count.
    * WARNING: Calls to this function must be synchronized or single threaded
