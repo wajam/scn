@@ -1,14 +1,11 @@
 package com.wajam.scn.storage
 
 import org.scalatest.FunSuite
-import org.scalatest.matchers.ShouldMatchers._
+import org.scalatest.Matchers._
 import com.wajam.commons.ControlableCurrentTime
 import com.wajam.nrv.utils.timestamp.Timestamp
-import com.wajam.scn.SequenceRange
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
-import java.lang.IllegalArgumentException
-import java.util.concurrent.Executors
 import language.postfixOps
 
 @RunWith(classOf[JUnitRunner])

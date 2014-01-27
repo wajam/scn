@@ -1,7 +1,7 @@
 package com.wajam.scn
 
 import org.scalatest.{BeforeAndAfter, FunSuite}
-import org.scalatest.matchers.ShouldMatchers
+import org.scalatest.{Matchers => ShouldMatchers}
 import com.wajam.nrv.protocol.codec.{Codec, GenericJavaSerializeCodec}
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
