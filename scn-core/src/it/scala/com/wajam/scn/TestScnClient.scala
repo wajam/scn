@@ -14,16 +14,9 @@ import org.mockito.Matchers
 import org.scalatest.mock.MockitoSugar
 import collection.mutable
 import com.wajam.nrv.utils.timestamp.Timestamp
-import org.scalatest.matchers.ShouldMatchers._
+import org.scalatest.Matchers.{atMost => _, _}
 import language.postfixOps
 
-/**
- * Description
- *
- * @author : Jerome Gagnon <jerome@wajam.com>
- * @copyright Copyright (c) Wajam inc.
- *
- */
 @RunWith(classOf[JUnitRunner])
 class TestScnClient extends FunSuite with MockitoSugar with BeforeAndAfter {
 
