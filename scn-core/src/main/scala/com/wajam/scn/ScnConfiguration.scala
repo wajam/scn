@@ -110,7 +110,7 @@ class ScnConfiguration(config: Configuration) {
   }
 
   def getExecutionContextPoolSize: Int = {
-    config.getInt("scn.execution-context.pool-size", 32)
+    config.getInt("scn.execution-context.pool-size", 8)
   }
 }
 
