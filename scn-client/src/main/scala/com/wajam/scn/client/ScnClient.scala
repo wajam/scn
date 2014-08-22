@@ -1,10 +1,28 @@
 package com.wajam.scn.client
 
+import scala.concurrent.{ExecutionContext, Future}
+
 import org.json4s.DefaultFormats
 
 import com.wajam.asyncclient._
 
-class HttpScnClient(scnServer: String, asyncClient: AsyncClient) {
+trait AsyncScnClient {
+
+  def getNextSequences(sequenceName: String, length: Int = 1)(implicit ec: ExecutionContext): Future[TypedJsonResponse[Seq[Long]]]
+
+  def getNextTimestamps(sequenceName: String, length: Int = 1)(implicit ec: ExecutionContext): Future[TypedJsonResponse[Seq[Long]]]
+
+}
+
+class HttpAsyncScnClient(scnServer: String, asyncClient: AsyncClient) extends AsyncScnClient {
+
+  def getNextSequences(sequenceName: String, length: Int = 1)(implicit ec: ExecutionContext): Future[TypedJsonResponse[Seq[Long]]] = {
+    sequences(sequenceName).get(Map("length" -> length.toString))
+  }
+
+  def getNextTimestamps(sequenceName: String, length: Int = 1)(implicit ec: ExecutionContext): Future[TypedJsonResponse[Seq[Long]]] = {
+    timestamps(sequenceName).get(Map("length" -> length.toString))
+  }
 
   val sequences = ScnResourceModule.SequencesResource
   val timestamps = ScnResourceModule.TimestampsResource
@@ -51,6 +69,7 @@ class HttpScnClient(scnServer: String, asyncClient: AsyncClient) {
       protected val name = "timestamps"
 
     }
+
   }
 
 }
