@@ -19,6 +19,10 @@ class ScnConfiguration(config: Configuration) {
     config.getInt("scn.nrv.listen.port")
   }
 
+  def getHttpListenPort: Int = {
+    config.getInt("scn.http.listen.port")
+  }
+
   def getNrvClusterManager: String = {
     config.getString("scn.nrv.cluster_manager")
   }
@@ -95,6 +99,18 @@ class ScnConfiguration(config: Configuration) {
 
   def getTraceSamplingRate: Int = {
     config.getInt("scn.trace.sampling_rate", 1000)
+  }
+
+  def getConnectionTimeoutMs: Int = {
+    config.getInt("scn.http.connection.timeout.ms", 10000)
+  }
+
+  def getConnectionPoolMaxSize: Int = {
+    config.getInt("scn.http.connection.pool.max-size", 100)
+  }
+
+  def getExecutionContextPoolSize: Int = {
+    config.getInt("scn.execution-context.pool-size", 8)
   }
 }
 

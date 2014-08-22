@@ -36,6 +36,10 @@ object ScnBuild extends Build {
     "org.mockito" % "mockito-core" % "1.9.0" % "test,it"
   )
 
+  val clientDeps = Seq(
+    "com.wajam" %% "commons-asyncclient" % "0.1-SNAPSHOT"
+  )
+
   val defaultSettings = Defaults.defaultSettings ++ Defaults.itSettings ++ Seq(
     libraryDependencies ++= commonDeps,
     resolvers ++= commonResolvers,
@@ -53,7 +57,7 @@ object ScnBuild extends Build {
     .settings(testOptions in IntegrationTest := Seq(Tests.Filter(s => s.contains("Test"))))
     .settings(parallelExecution in IntegrationTest := false)
     .settings(SbtStartScript.startScriptForClassesSettings: _*)
-    .aggregate(core)
+    .aggregate(core, client)
 
   lazy val core = Project("scn-core", file("scn-core"))
     .configs(IntegrationTest)
@@ -65,6 +69,14 @@ object ScnBuild extends Build {
     .settings(parallelExecution in IntegrationTest := false)
     .settings(SbtStartScript.startScriptForClassesSettings: _*)
     .settings(mainClass in (Compile) := Some("com.wajam.scn.ScnServer"))
+
+  lazy val client = Project("scn-client", file("scn-client"))
+    .configs(IntegrationTest)
+    .settings(defaultSettings ++ (libraryDependencies ++= clientDeps): _*)
+    .settings(testOptions in IntegrationTest := Seq(Tests.Filter(s => s.contains("Test"))))
+    .settings(parallelExecution in IntegrationTest := false)
+    .settings(SbtStartScript.startScriptForClassesSettings: _*)
+    .dependsOn(core)
 
   import sbtprotobuf.{ProtobufPlugin => PB}
 

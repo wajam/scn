@@ -1,5 +1,7 @@
 package com.wajam.scn
 
+import scala.concurrent.{Promise, Future}
+
 import com.wajam.nrv.service.{ActionSupportOptions, Resolver, Action, Service}
 import storage._
 
@@ -113,6 +115,17 @@ class Scn(serviceName: String = "scn",
     getNext(sequenceName, this.nextTimestamp, cb, nb)
   }
 
+  private[scn] def getNextTimestamp(sequenceName: String, nb: Int): Future[Seq[SequenceRange]] = {
+    val timestampsPromise = Promise[Seq[SequenceRange]]()
+    getNext(sequenceName, this.nextTimestamp, (seq, optEx) => {
+      optEx match {
+        case Some(e) => timestampsPromise.failure(e)
+        case None => timestampsPromise.success(seq)
+      }
+    }, nb)
+    timestampsPromise.future
+  }
+
   private[scn] val nextSequence = this.registerAction(new Action("/sequence/:name/next", msg => {
     nextSequenceCalls.mark()
     val timer = nextSequenceTime.timerContext()
@@ -151,5 +164,16 @@ class Scn(serviceName: String = "scn",
 
   private[scn] def getNextSequence(sequenceName: String, cb: (Seq[SequenceRange], Option[Exception]) => Unit, nb: Int) {
     getNext(sequenceName, this.nextSequence, cb, nb)
+  }
+
+  private[scn] def getNextSequence(sequenceName: String, nb: Int): Future[Seq[SequenceRange]] = {
+    val sequencePromise = Promise[Seq[SequenceRange]]()
+    getNext(sequenceName, this.nextSequence, (seq, optEx) => {
+      optEx match {
+        case Some(e) => sequencePromise.failure(e)
+        case None => sequencePromise.success(seq)
+      }
+    }, nb)
+    sequencePromise.future
   }
 }
