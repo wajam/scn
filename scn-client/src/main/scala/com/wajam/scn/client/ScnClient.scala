@@ -8,20 +8,32 @@ import com.wajam.asyncclient._
 
 trait AsyncScnClient {
 
-  def getNextSequences(sequenceName: String, length: Int = 1)(implicit ec: ExecutionContext): Future[Option[Seq[Long]]]
+  def getNextSequences(sequenceName: String, length: Int = 1)(implicit ec: ExecutionContext): Future[Seq[Long]]
 
-  def getNextTimestamps(sequenceName: String, length: Int = 1)(implicit ec: ExecutionContext): Future[Option[Seq[Long]]]
+  def getNextTimestamps(sequenceName: String, length: Int = 1)(implicit ec: ExecutionContext): Future[Seq[Long]]
 
 }
 
+class ScnClientException(message: String, cause: Throwable = null) extends Exception(message, cause)
+
 class HttpAsyncScnClient(scnServer: String, asyncClient: AsyncClient) extends AsyncScnClient {
 
-  def getNextSequences(sequenceName: String, length: Int = 1)(implicit ec: ExecutionContext): Future[Option[Seq[Long]]] = {
-    sequences(sequenceName).get(Map("length" -> length.toString)).map(_.value)
+  def getNextSequences(sequenceName: String, length: Int = 1)(implicit ec: ExecutionContext): Future[Seq[Long]] = {
+    sequences(sequenceName).get(Map("length" -> length.toString)).map { response =>
+      if (response.code >= 300) {
+        Future.failed(throw new ScnClientException("SCN failure ${response.code}"))
+      }
+      response.value.get
+    }
   }
 
-  def getNextTimestamps(sequenceName: String, length: Int = 1)(implicit ec: ExecutionContext): Future[Option[Seq[Long]]] = {
-    timestamps(sequenceName).get(Map("length" -> length.toString)).map(_.value)
+  def getNextTimestamps(sequenceName: String, length: Int = 1)(implicit ec: ExecutionContext): Future[Seq[Long]] = {
+    timestamps(sequenceName).get(Map("length" -> length.toString)).map { response =>
+      if (response.code >= 300) {
+        Future.failed(throw new ScnClientException("SCN failure ${response.code}"))
+      }
+      response.value.get
+    }
   }
 
   val sequences = ScnResourceModule.SequencesResource
