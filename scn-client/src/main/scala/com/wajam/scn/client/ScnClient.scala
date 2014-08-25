@@ -8,20 +8,20 @@ import com.wajam.asyncclient._
 
 trait AsyncScnClient {
 
-  def getNextSequences(sequenceName: String, length: Int = 1)(implicit ec: ExecutionContext): Future[TypedJsonResponse[Seq[Long]]]
+  def getNextSequences(sequenceName: String, length: Int = 1)(implicit ec: ExecutionContext): Future[Option[Seq[Long]]]
 
-  def getNextTimestamps(sequenceName: String, length: Int = 1)(implicit ec: ExecutionContext): Future[TypedJsonResponse[Seq[Long]]]
+  def getNextTimestamps(sequenceName: String, length: Int = 1)(implicit ec: ExecutionContext): Future[Option[Seq[Long]]]
 
 }
 
 class HttpAsyncScnClient(scnServer: String, asyncClient: AsyncClient) extends AsyncScnClient {
 
-  def getNextSequences(sequenceName: String, length: Int = 1)(implicit ec: ExecutionContext): Future[TypedJsonResponse[Seq[Long]]] = {
-    sequences(sequenceName).get(Map("length" -> length.toString))
+  def getNextSequences(sequenceName: String, length: Int = 1)(implicit ec: ExecutionContext): Future[Option[Seq[Long]]] = {
+    sequences(sequenceName).get(Map("length" -> length.toString)).map(_.value)
   }
 
-  def getNextTimestamps(sequenceName: String, length: Int = 1)(implicit ec: ExecutionContext): Future[TypedJsonResponse[Seq[Long]]] = {
-    timestamps(sequenceName).get(Map("length" -> length.toString))
+  def getNextTimestamps(sequenceName: String, length: Int = 1)(implicit ec: ExecutionContext): Future[Option[Seq[Long]]] = {
+    timestamps(sequenceName).get(Map("length" -> length.toString)).map(_.value)
   }
 
   val sequences = ScnResourceModule.SequencesResource
