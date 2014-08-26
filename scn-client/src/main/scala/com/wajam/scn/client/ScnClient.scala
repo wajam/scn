@@ -21,7 +21,7 @@ class HttpAsyncScnClient(scnServer: String, asyncClient: AsyncClient) extends As
   def getNextSequences(sequenceName: String, length: Int = 1)(implicit ec: ExecutionContext): Future[Seq[Long]] = {
     sequences(sequenceName).get(Map("length" -> length.toString)).map { response =>
       if (response.code >= 300) {
-        Future.failed(throw new ScnClientException("SCN failure ${response.code}"))
+        Future.failed(throw new ScnClientException(s"SCN failure ${response.code}"))
       }
       response.value.get
     }
@@ -30,7 +30,7 @@ class HttpAsyncScnClient(scnServer: String, asyncClient: AsyncClient) extends As
   def getNextTimestamps(sequenceName: String, length: Int = 1)(implicit ec: ExecutionContext): Future[Seq[Long]] = {
     timestamps(sequenceName).get(Map("length" -> length.toString)).map { response =>
       if (response.code >= 300) {
-        Future.failed(throw new ScnClientException("SCN failure ${response.code}"))
+        Future.failed(throw new ScnClientException(s"SCN failure ${response.code}"))
       }
       response.value.get
     }

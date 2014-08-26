@@ -85,6 +85,10 @@ class ScnConfiguration(config: Configuration) {
     config.getInt("scn.nrv.switchboard.num_executors", 200)
   }
 
+  def getNrvOptimizeLocalCall: Boolean = {
+    config.getBoolean("scn.nrv.optimize.local.call", false)
+  }
+
   def isTraceEnabled: Boolean = {
     config.getBoolean("scn.trace.enabled", false)
   }

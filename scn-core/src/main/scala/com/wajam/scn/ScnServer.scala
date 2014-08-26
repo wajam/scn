@@ -17,7 +17,7 @@ import java.util.concurrent.{Executors, TimeUnit}
 import com.wajam.commons.Logging
 import com.wajam.nrv.service.{Service, ActionSupportOptions}
 import com.wajam.nrv.scribe.ScribeTraceRecorder
-import com.wajam.nrv.protocol.HttpProtocol
+import com.wajam.nrv.protocol.{NrvProtocol, NrvMemoryProtocol, NrvLocalBranchingProtocol, HttpProtocol}
 
 class ScnServer(config: ScnConfiguration)(implicit val ec: ExecutionContext) extends Logging {
   self =>
@@ -43,8 +43,21 @@ class ScnServer(config: ScnConfiguration)(implicit val ec: ExecutionContext) ext
     case "zookeeper" => new ZookeeperClusterManager(zookeeper)
   }
 
+  // Create inter-node protocol
+  val baseProtocol =
+    new NrvProtocol(node,
+      config.getConnectionTimeoutMs,
+      config.getConnectionPoolMaxSize)
+
+  val nrvProtocol = if (config.getNrvOptimizeLocalCall) {
+    val localProtocol = new NrvMemoryProtocol(baseProtocol.name, node, config.getExecutionContextPoolSize)
+    new NrvLocalBranchingProtocol(baseProtocol.name, node, localProtocol, baseProtocol)
+  } else {
+    baseProtocol
+  }
+
   val cluster = new Cluster(node, clusterManager,
-    actionSupportOptions = new ActionSupportOptions(tracer = Some(new Tracer(traceRecorder, samplingRate = config.getTraceSamplingRate))))
+    actionSupportOptions = new ActionSupportOptions(tracer = Some(new Tracer(traceRecorder, samplingRate = config.getTraceSamplingRate))), Some(nrvProtocol))
 
   // Sequence number generator
   val scnStorage = config.getScnSequenceStorage
