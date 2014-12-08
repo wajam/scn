@@ -9,8 +9,8 @@ store its waypoints. It's able to generate 10000 IDs by millisecond and has been
 
 ## Requirements
 - At least three servers for ZooKeeper with 2GB min. The SCN server can run on one of them (512MB min).
-- Java 7+ (see <a href="https://github.com/wajam/scn/blob/master/README.md#a---installation-of-java-7-openjdk-if-you-prefer-another-jdk-feel-free-to-install-your-own-but-we-need-java">Annexes, section A</a>).
-- SBT 0.13.0+ (see <a href="https://github.com/wajam/scn/blob/master/README.md#b---installation-of-sbt-0136">Annexes, section B</a>).
+- Java 7+ (see <a href="https://github.com/wajam/scn/blob/master/README.md#a---installation-of-java-7-openjdk-if-you-prefer-another-jdk-feel-free-to-install-your-own-but-we-need-java">Appendix, section A</a>).
+- SBT 0.13.0+ (see <a href="https://github.com/wajam/scn/blob/master/README.md#b---installation-of-sbt-0136">Appendix, section B</a>).
 
 
 
@@ -26,7 +26,7 @@ The process will be done in three steps:
 1. `sudo apt-get update`
 2. `cd ~ && wget http://mirror.csclub.uwaterloo.ca/apache/zookeeper/zookeeper-3.4.6/zookeeper-3.4.6.tar.gz`
 4. `tar -xvf zookeeper-3.4.6.tar.gz`
-5. `sudo nano ~/zookeeper-3.4.6/conf/zoo.cfg` Use the <a href="https://github.com/wajam/scn/blob/master/README.md#c---zoocfg">Annexes, section C</a>.
+5. `sudo nano ~/zookeeper-3.4.6/conf/zoo.cfg` Use the <a href="https://github.com/wajam/scn/blob/master/README.md#c---zoocfg">Appendix, section C</a>.
 6. `sudo mkdir -p /var/lib/zookeeper`
 7. `sudo nano /var/lib/zookeeper/myid` Type X  where X is the number of your server in zoo.cfg (1, 2 or 3 from zoo.cfg) then save your file.
 8. `cd ~/zookeeper-3.4.6`
@@ -37,7 +37,7 @@ The process will be done in three steps:
 1. `cd ~ ; wget https://github.com/wajam/nrv/archive/master.zip`
 2. `unzip master` (sudo apt-get install -y unzip if you don’t have).
 3. `cd nrv-master/ ; sbt stage`
-4. `sudo nano local.cluster` Use the <a href="https://github.com/wajam/scn/blob/master/README.md#d---localcluster">Annexes, section D</a>. Careful to modify the IP and PORT to your convenience. If you need more than one SCN server, repeat the two line with the IP and the /votes.
+4. `sudo nano local.cluster` Use the <a href="https://github.com/wajam/scn/blob/master/README.md#d---localcluster">Appendix, section D</a>. Careful to modify the IP and PORT to your convenience. If you need more than one SCN server, repeat the two line with the IP and the /votes.
 4. `./nrv-zookeeper/target/start` to see the help and do a update with your local.cluster file config. Everything should be fine if you see your config file below the `Add` section.
 
 Example of result:
@@ -63,7 +63,7 @@ Ignore
 4. `./bin/start -Dscn.config=etc/default.properties com.wajam.scn.ScnServer`
 
 ## Usage
-The SCN server expose by default an API on port 9500. There is only two calls:
+The SCN server exposes by default an API on port 9500. There is only two calls:
   * `/timestamps/:name/next` Return IDs following the current timestamp.
   * `/sequences/:name/next` Return IDs starting by 0 (or the number given in your the default.properties).
 
@@ -96,7 +96,7 @@ Your local.cluster should be like that:
 /services/scn/members/0/votes
 ```
 
-## Annexes
+## Appendix
 ##### A - Installation of Java 7 OpenJDK (if you prefer another JDK, feel free to install your own but we need Java)
 1. `sudo apt-get install openjdk-7-jdk -y` Install OpenJDK 7.
 2. `sudo update-alternatives --config java` Select the right version of Java.
