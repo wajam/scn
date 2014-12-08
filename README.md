@@ -69,7 +69,7 @@ The SCN server expose by default an API on port 9500. There is only two calls:
   * `/timestamps/:name/next` Return IDs following the current timestamp.
   * `/sequences/:name/next` Return IDs starting by 0 (or the number given in your the default.properties).
 
-If you want to have more than one ID, you can use the query param `length`:
+If you want to have more than one ID, you can use the query param `length` (maximum is 10000):
   * `/timestamps/:name/next?length=1000`
   * `/sequences/:name/next?length=1000`
 
