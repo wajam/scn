@@ -3,7 +3,7 @@
 ## Description
 
 Distributed sequence and timestamp generator. Generates sequence numbers or timestamp with no collision with Zookeeper to
-store its waypoints. It's able to generate 10000 IDs by millisecond and has been tested in production for two years.
+store its waypoints. It's able to generate 10000 IDs by millisecond and has been tested in production for at least two years.
 
 ![SCN Architecture](http://img11.hostingpics.net/pics/507848ScreenShot20141208at112545AM.png)
 
