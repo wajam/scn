@@ -24,7 +24,7 @@ The process will be done in three steps:
   2. Export ZooKeeper config via the ZooKeeperClusterTool.
   3. Installation of SCN.
  
-#### Installation of ZooKeeper (on three servers at least, you have to repeat theses commands for each servers)
+#### Installation of ZooKeeper (on three servers at least, you have to repeat theses commands for each server)
 1. `sudo apt-get update`
 2. `cd ~ && wget http://mirror.csclub.uwaterloo.ca/apache/zookeeper/zookeeper-3.4.6/zookeeper-3.4.6.tar.gz`
 4. `tar -xvf zookeeper-3.4.6.tar.gz`
