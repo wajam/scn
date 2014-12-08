@@ -19,6 +19,8 @@ The process will be done in three steps:
   1. Installation of ZooKeeper's cluster.
   2. Export ZooKeeper config via the ZooKeeperClusterTool.
   3. Installation of SCN.
+
+<strong>Duration</strong>: ~20 mins.
  
 #### Installation of ZooKeeper (on three servers at least, you have to repeat theses commands for each server)
 1. `sudo apt-get update`
