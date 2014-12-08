@@ -33,7 +33,7 @@ The process will be done in three steps:
 7. `sudo nano /var/lib/zookeeper/myid` Type X  where X is the number of your server in zoo.cfg (1, 2 or 3 from zoo.cfg) then save your file.
 8. `cd ~/zookeeper-3.4.6`
 9. `sudo bin/zkServer.sh start`
-10. (Optional) `bin/zkCli.sh -server 10.0.0.2:2181` Verify if ZooKeeper is running.
+10. (Optional) `bin/zkCli.sh -server yourip:2181` Verify if ZooKeeper is running.
 
 #### Export ZooKeeper config (will export your config on every ZooKeeper server)
 1. `cd ~ ; wget https://github.com/wajam/nrv/archive/master.zip`
