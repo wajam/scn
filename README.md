@@ -5,6 +5,8 @@
 Distributed sequence and timestamp generator. Generates sequence numbers or timestamp with no collision with Zookeeper to
 store its waypoints. It's able to generate 10000 IDs by millisecond and has been tested in production for two years.
 
+![SCN Architecture](http://www.hostingpics.net/viewer.php?id=507848ScreenShot20141208at112545AM.png)
+
 ## Requirements
 - At least three servers for ZooKeeper with 2GB min. The SCN server can run on one of them (512MB min).
 - Java 7+.
@@ -72,9 +74,25 @@ If you want to have more than one ID, you can use the query param `length`:
 Either you forgot to modify the `scn.nrv.zookeeper.servers` in the default.properties or you didn't start your ZooKeeper servers.
 
 ##### I want to have more than one SCN server, how do I do that?
-Just add theses line for each SCN server in local.cluster in the `Export ZooKeeper Config`:
+Follow the `Installation of SCN` for every new SCN server and then just add theses line for each SCN server in local.cluster in the `Export ZooKeeper Config`:
   * `/services/scn/members/0=0:YOURNRVCLIENTIP:nrv=YOURNRVPORT (default 9595)`
   * `/services/scn/members/0/votes`
+
+Your local.cluster should be like that:
+```
+/services/scn=scn
+
+/services/scn/members/0=0:YOURNRVCLIENTIP1:nrv=YOURNRVPORT
+/services/scn/members/0/votes
+
+/services/scn/members/0=0:YOURNRVCLIENTIP2:nrv=YOURNRVPORT
+/services/scn/members/0/votes
+
+...
+
+/services/scn/members/0=0:YOURNRVCLIENTIPN:nrv=YOURNRVPORT
+/services/scn/members/0/votes
+```
 
 ## Annexes
 ##### A - Installation of Java 7 OpenJDK (if you prefer another JDK, feel free to install your own but we need Java)
