@@ -10,7 +10,7 @@ store its waypoints. It's able to generate 10000 IDs by millisecond and has been
 - Java 7+.
 - SBT 0.13.0+.
 
-##### Installation of Java 7
+##### Installation of Java 7 OpenJDK (if you prefer another JDK, feel free to install your own but we need Java)
 1. `sudo apt-get install openjdk-7-jdk -y` Install OpenJDK 7.
 2. `sudo update-alternatives --config java` Select the right version of Java.
 
