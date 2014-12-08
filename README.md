@@ -3,10 +3,10 @@
 ## Description
 
 Distributed sequence and timestamp generator. Generates sequence numbers or timestamp with no collision with Zookeeper to
-store its waypoints. It's able to generate 10000 IDs by millisecond.
+store its waypoints. It's able to generate 10000 IDs by millisecond and has been tested in production for two years.
 
 ## Requirements
-- At least three servers for ZooKeeper. The SCN server can run on one of them.
+- At least three servers for ZooKeeper with 2GB min. The SCN server can run on one of them (512MB min).
 - Java 7+.
 - SBT 0.13.0+.
 
